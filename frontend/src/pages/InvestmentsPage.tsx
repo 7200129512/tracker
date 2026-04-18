@@ -17,6 +17,55 @@ const EMPTY = {
   purchaseDate: new Date().toISOString().slice(0, 10),
 };
 
+// Free stock market APIs
+const STOCK_APIS = {
+  // Using Alpha Vantage (free tier, 5 calls/min)
+  ALPHA_VANTAGE: 'https://www.alphavantage.co/query',
+  // Using Finnhub (free tier)
+  FINNHUB: 'https://finnhub.io/api/v1/quote',
+  // Using Polygon.io (free tier)
+  POLYGON: 'https://api.polygon.io/v1/open-close',
+};
+
+// Function to fetch current stock price from multiple APIs
+const fetchStockPrice = async (symbol: string): Promise<number | null> => {
+  try {
+    // Try Alpha Vantage first (works for Indian stocks with .NS or .BO suffix)
+    const alphaResponse = await fetch(
+      `${STOCK_APIS.ALPHA_VANTAGE}?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=demo`,
+      { signal: AbortSignal.timeout(5000) }
+    ).catch(() => null);
+
+    if (alphaResponse?.ok) {
+      const data = await alphaResponse.json();
+      const price = parseFloat(data['05. price']);
+      if (!isNaN(price) && price > 0) {
+        return price;
+      }
+    }
+
+    // Try Yahoo Finance API via RapidAPI (free tier available)
+    // Note: You may need to add your own API key for production
+    const yahooResponse = await fetch(
+      `https://query1.finance.yahoo.com/v10/finance/quoteSummary/${symbol}?modules=price`,
+      { signal: AbortSignal.timeout(5000) }
+    ).catch(() => null);
+
+    if (yahooResponse?.ok) {
+      const data = await yahooResponse.json();
+      const price = data?.quoteSummary?.result?.[0]?.price?.regularMarketPrice?.raw;
+      if (price && price > 0) {
+        return price;
+      }
+    }
+
+    return null;
+  } catch (error) {
+    console.error(`Error fetching price for ${symbol}:`, error);
+    return null;
+  }
+};
+
 export default function InvestmentsPage() {
   const { data: holdings = [], isLoading } = useHoldings();
   const { data: closed = [] } = useClosedPositions();
@@ -27,6 +76,7 @@ export default function InvestmentsPage() {
   const [error, setError] = useState('');
   const [currentPrices, setCurrentPrices] = useState<{ [key: string]: number }>({});
   const [loadingPrices, setLoadingPrices] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   // Fetch current prices for all holdings
   useEffect(() => {
@@ -37,31 +87,25 @@ export default function InvestmentsPage() {
       const prices: { [key: string]: number } = {};
       
       for (const holding of holdings) {
-        try {
-          // Using a free stock API - you can replace with your preferred API
-          const response = await fetch(
-            `https://api.example.com/quote/${holding.stockSymbol}`,
-            { signal: AbortSignal.timeout(5000) }
-          ).catch(() => null);
-          
-          if (response?.ok) {
-            const data = await response.json();
-            prices[holding.stockSymbol] = data.price || holding.purchasePrice;
-          } else {
-            // Fallback to purchase price if API fails
-            prices[holding.stockSymbol] = holding.purchasePrice;
-          }
-        } catch (err) {
+        const price = await fetchStockPrice(holding.stockSymbol);
+        if (price) {
+          prices[holding.stockSymbol] = price;
+        } else {
           // Fallback to purchase price if API fails
           prices[holding.stockSymbol] = holding.purchasePrice;
         }
       }
       
       setCurrentPrices(prices);
+      setLastUpdated(new Date());
       setLoadingPrices(false);
     };
 
     fetchPrices();
+    
+    // Refresh prices every 5 minutes
+    const interval = setInterval(fetchPrices, 5 * 60 * 1000);
+    return () => clearInterval(interval);
   }, [holdings]);
 
   const handleAdd = async (e: React.FormEvent) => {
@@ -99,7 +143,15 @@ export default function InvestmentsPage() {
           value={`${formatINR(totalGain)} (${totalInvested > 0 ? formatPct((totalGain / totalInvested) * 100) : '0%'})`}
           color={totalGain >= 0 ? '#22c55e' : '#ef4444'}
         />
-        {loadingPrices && <div style={{ alignSelf: 'center', color: '#64748b' }}>Fetching prices...</div>}
+        <div style={{ alignSelf: 'center', fontSize: 12, color: '#64748b' }}>
+          {loadingPrices ? (
+            <span>🔄 Fetching live prices...</span>
+          ) : lastUpdated ? (
+            <span>✓ Updated: {lastUpdated.toLocaleTimeString()}</span>
+          ) : (
+            <span>Prices loading...</span>
+          )}
+        </div>
       </div>
 
       {/* Add form */}
