@@ -1,8 +1,12 @@
 import axios from 'axios';
 
-// Supabase configuration
-const SUPABASE_URL = 'https://zcoldagsacuaceohddal.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpjb2xkYWdzYWN1YWNlb2hkZGFsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTMzNzc5NDEsImV4cCI6MTcyODk2OTk0MX0.8_8_8_8_8_8_8_8_8_8_8_8_8_8_8_8_8_8_8_8_8';
+// Supabase configuration - get from environment variables
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://zcoldagsacuaceohddal.supabase.co';
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+
+if (!SUPABASE_ANON_KEY) {
+  console.warn('⚠️ VITE_SUPABASE_ANON_KEY is not set. API requests will fail with 401 errors.');
+}
 
 // Create Supabase client
 export const supabaseClient = axios.create({
