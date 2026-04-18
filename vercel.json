@@ -10,6 +10,26 @@
       "destination": "/api/dashboard"
     },
     {
+      "source": "/api/v1/income",
+      "destination": "/api/income"
+    },
+    {
+      "source": "/api/v1/expenses",
+      "destination": "/api/expenses"
+    },
+    {
+      "source": "/api/v1/loans",
+      "destination": "/api/loans"
+    },
+    {
+      "source": "/api/v1/investments",
+      "destination": "/api/investments"
+    },
+    {
+      "source": "/api/v1/savings",
+      "destination": "/api/savings"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
