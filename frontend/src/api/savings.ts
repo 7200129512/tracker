@@ -62,7 +62,17 @@ export const useAddTransaction = () => {
   return useMutation({
     mutationFn: (data: Omit<SavingsTransaction, 'id'>) => {
       if (!user?.id) throw new Error('User not authenticated');
-      return supabaseClient.post('/savings_transactions', { ...data, user_id: user.id });
+      
+      // Convert camelCase to snake_case for database
+      const payload = {
+        type: data.type,
+        amount: data.amount,
+        date: data.date,
+        description: data.description,
+        user_id: user.id,
+      };
+      
+      return supabaseClient.post('/savings_transactions', payload);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['savings'] });
@@ -78,7 +88,16 @@ export const useUpdateTransaction = () => {
   return useMutation({
     mutationFn: ({ id, ...data }: SavingsTransaction) => {
       if (!user?.id) throw new Error('User not authenticated');
-      return supabaseClient.patch(`/savings_transactions?id=eq.${id}&user_id=eq.${user.id}`, data);
+      
+      // Convert camelCase to snake_case for database
+      const payload = {
+        type: data.type,
+        amount: data.amount,
+        date: data.date,
+        description: data.description,
+      };
+      
+      return supabaseClient.patch(`/savings_transactions?id=eq.${id}&user_id=eq.${user.id}`, payload);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['savings'] }),
   });

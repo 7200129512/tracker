@@ -53,9 +53,19 @@ export const useAddIncome = () => {
   return useMutation({
     mutationFn: (data: Omit<IncomeEntry, 'id'>) => {
       if (!user?.id) throw new Error('User not authenticated');
+      
+      // Convert camelCase to snake_case for database
+      const payload = {
+        source_name: data.sourceName,
+        amount: data.amount,
+        frequency: data.frequency,
+        effective_date: data.effectiveDate,
+        user_id: user.id,
+      };
+      
       console.log('Adding income with user_id:', user.id);
-      console.log('Data:', { ...data, user_id: user.id });
-      return supabaseClient.post('/income_entries', { ...data, user_id: user.id });
+      console.log('Payload:', payload);
+      return supabaseClient.post('/income_entries', payload);
     },
     onSuccess: () => {
       console.log('Income added successfully');
@@ -74,7 +84,16 @@ export const useUpdateIncome = () => {
   return useMutation({
     mutationFn: ({ id, ...data }: IncomeEntry) => {
       if (!user?.id) throw new Error('User not authenticated');
-      return supabaseClient.patch(`/income_entries?id=eq.${id}&user_id=eq.${user.id}`, data);
+      
+      // Convert camelCase to snake_case for database
+      const payload = {
+        source_name: data.sourceName,
+        amount: data.amount,
+        frequency: data.frequency,
+        effective_date: data.effectiveDate,
+      };
+      
+      return supabaseClient.patch(`/income_entries?id=eq.${id}&user_id=eq.${user.id}`, payload);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['income'] }),
   });

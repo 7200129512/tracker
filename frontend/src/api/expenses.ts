@@ -85,7 +85,19 @@ export const useAddExpense = () => {
   return useMutation({
     mutationFn: (data: Omit<ExpenseEntry, 'id'>) => {
       if (!user?.id) throw new Error('User not authenticated');
-      return supabaseClient.post('/expense_entries', { ...data, user_id: user.id });
+      
+      // Convert camelCase to snake_case for database
+      const payload = {
+        name: data.name,
+        amount: data.amount,
+        category: data.category,
+        type: data.type,
+        date: data.date,
+        due_date: data.dueDate,
+        user_id: user.id,
+      };
+      
+      return supabaseClient.post('/expense_entries', payload);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['expenses'] }),
   });
@@ -98,7 +110,18 @@ export const useUpdateExpense = () => {
   return useMutation({
     mutationFn: ({ id, ...data }: ExpenseEntry) => {
       if (!user?.id) throw new Error('User not authenticated');
-      return supabaseClient.patch(`/expense_entries?id=eq.${id}&user_id=eq.${user.id}`, data);
+      
+      // Convert camelCase to snake_case for database
+      const payload = {
+        name: data.name,
+        amount: data.amount,
+        category: data.category,
+        type: data.type,
+        date: data.date,
+        due_date: data.dueDate,
+      };
+      
+      return supabaseClient.patch(`/expense_entries?id=eq.${id}&user_id=eq.${user.id}`, payload);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['expenses'] }),
   });
