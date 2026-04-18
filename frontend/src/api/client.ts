@@ -1,30 +1,21 @@
 import axios from 'axios';
 
-// Use the deployed Netlify URL
-const BASE_URL = 'https://tracker-2026-app.netlify.app';
+// Supabase configuration
+const SUPABASE_URL = 'https://zcoldagsacuaceohddal.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpjb2xkYWdzYWN1YWNlb2hkZGFsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTMzNzc5NDEsImV4cCI6MTcyODk2OTk0MX0.8_8_8_8_8_8_8_8_8_8_8_8_8_8_8_8_8_8_8_8_8';
 
-export const apiClient = axios.create({
-  baseURL: `${BASE_URL}/api/v1`,
-  headers: { 'Content-Type': 'application/json' },
-  timeout: 15000,
+// Create Supabase client
+export const supabaseClient = axios.create({
+  baseURL: `${SUPABASE_URL}/rest/v1`,
+  headers: {
+    'apikey': SUPABASE_ANON_KEY,
+    'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+    'Content-Type': 'application/json',
+    'Prefer': 'return=representation'
+  }
 });
 
-// Unwrap { data, error } envelope
-apiClient.interceptors.response.use(
-  (response) => {
-    if (response.data && 'data' in response.data) {
-      response.data = response.data.data;
-    }
-    return response;
-  },
-  (error) => {
-    const message =
-      error.response?.data?.error ||
-      error.response?.data?.message ||
-      error.message ||
-      'An unexpected error occurred';
-    return Promise.reject(new Error(message));
-  }
-);
+// For backward compatibility, also export as apiClient
+export const apiClient = supabaseClient;
 
-export default apiClient;
+export default supabaseClient;
