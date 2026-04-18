@@ -6,7 +6,7 @@
 [build.environment]
   NODE_VERSION = "18"
   VITE_SUPABASE_URL = "https://zcoldagsacuaceohddal.supabase.co"
-  VITE_SUPABASE_ANON_KEY = "YOUR_ANON_KEY_HERE"
+  VITE_SUPABASE_ANON_KEY = "sb_publishable_5yBakyZylUUcYza32az7Ug_kDMZa-Y6"
 
 [functions]
   directory = "netlify/functions"
