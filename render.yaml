@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: portfolio-tracker-backend
+    env: node
+    region: singapore
+    plan: free
+    buildCommand: npm install && npm run build --workspace=backend
+    startCommand: npm run start --workspace=backend
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: DATABASE_URL
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+      - key: MARKET_DATA_REFRESH_CRON
+        value: "*/15 9-15 * * 1-5"
