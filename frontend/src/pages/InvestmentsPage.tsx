@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useHoldings, useClosedPositions, useAddHolding, useDeleteHolding } from '../api/investments';
 import type { InvestmentHolding } from '../types';
 import { formatINR, formatPct } from '../utils/format';
@@ -11,6 +11,10 @@ const EMPTY = {
   purchaseDate: new Date().toISOString().slice(0, 10),
 };
 
+interface HoldingWithPriceError extends InvestmentHolding {
+  priceError?: string;
+}
+
 export default function InvestmentsPage() {
   const { data: holdings = [], isLoading } = useHoldings();
   const { data: closed = [] } = useClosedPositions();
@@ -18,6 +22,40 @@ export default function InvestmentsPage() {
   const deleteHolding = useDeleteHolding();
   const [form, setForm] = useState(EMPTY);
   const [error, setError] = useState('');
+  const [holdingsWithPrices, setHoldingsWithPrices] = useState<HoldingWithPriceError[]>([]);
+  const [loadingPrices, setLoadingPrices] = useState(false);
+
+  // Fetch real-time prices for all holdings
+  useEffect(() => {
+    if (holdings.length === 0) {
+      setHoldingsWithPrices([]);
+      return;
+    }
+
+    setLoadingPrices(true);
+    const fetchPrices = async () => {
+      const updated = await Promise.all(
+        holdings.map(async (holding) => {
+          try {
+            const response = await fetch(`/.netlify/functions/stock-price?symbol=${holding.stockSymbol}`);
+            if (response.ok) {
+              const data = await response.json();
+              return { ...holding, currentPrice: data.price };
+            } else {
+              return { ...holding, priceError: 'Failed to fetch price' };
+            }
+          } catch (err) {
+            console.error(`Error fetching price for ${holding.stockSymbol}:`, err);
+            return { ...holding, priceError: 'Error fetching price' };
+          }
+        })
+      );
+      setHoldingsWithPrices(updated);
+      setLoadingPrices(false);
+    };
+
+    fetchPrices();
+  }, [holdings]);
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,7 +68,10 @@ export default function InvestmentsPage() {
     }
   };
 
-  const totalInvested = holdings.reduce((s, h) => s + h.quantity * h.purchasePrice, 0);
+  const totalInvested = holdingsWithPrices.reduce((s, h) => s + h.quantity * h.purchasePrice, 0);
+  const totalCurrentValue = holdingsWithPrices.reduce((s, h) => s + h.quantity * (h.currentPrice || h.purchasePrice), 0);
+  const totalGain = totalCurrentValue - totalInvested;
+  const totalGainPct = totalInvested > 0 ? (totalGain / totalInvested) * 100 : 0;
 
   return (
     <div>
@@ -38,10 +79,12 @@ export default function InvestmentsPage() {
 
       <div style={{ display: 'flex', gap: 16, marginBottom: 16, flexWrap: 'wrap' }}>
         <SummaryCard label="Total Invested" value={formatINR(totalInvested)} color="#3b82f6" />
-        <div style={{ background: '#fff', borderRadius: 10, padding: '14px 18px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', borderLeft: '4px solid #f59e0b', minWidth: 200 }}>
-          <div style={{ fontSize: 12, color: '#64748b', marginBottom: 4 }}>ℹ️ Note</div>
-          <div style={{ fontSize: 12, color: '#92400e' }}>Real-time prices require a paid API. Currently showing purchase prices.</div>
-        </div>
+        <SummaryCard label="Current Value" value={formatINR(totalCurrentValue)} color="#8b5cf6" />
+        <SummaryCard 
+          label="Total Gain/Loss" 
+          value={`${formatINR(totalGain)} (${formatPct(totalGainPct)})`} 
+          color={totalGain >= 0 ? '#22c55e' : '#ef4444'} 
+        />
       </div>
 
       <div style={cardStyle}>
@@ -58,8 +101,8 @@ export default function InvestmentsPage() {
       </div>
 
       <div style={{ ...cardStyle, marginTop: 16 }}>
-        <h3 style={{ marginBottom: 12 }}>Active Holdings</h3>
-        {isLoading ? <p>Loading…</p> : holdings.length === 0 ? (
+        <h3 style={{ marginBottom: 12 }}>Active Holdings {loadingPrices && <span style={{ fontSize: 12, color: '#94a3b8' }}>(updating prices...)</span>}</h3>
+        {isLoading ? <p>Loading…</p> : holdingsWithPrices.length === 0 ? (
           <p style={{ color: '#94a3b8' }}>No holdings yet.</p>
         ) : (
           <div style={{ overflowX: 'auto' }}>
@@ -72,21 +115,30 @@ export default function InvestmentsPage() {
                 </tr>
               </thead>
               <tbody>
-                {holdings.map((h) => {
+                {holdingsWithPrices.map((h) => {
+                  const currentPrice = h.currentPrice || h.purchasePrice;
                   const investedAmount = h.quantity * h.purchasePrice;
-                  const currentValue = investedAmount; // Same as invested for now
-                  const gain = 0; // No gain/loss without real prices
-                  const gainPct = 0;
+                  const currentValue = h.quantity * currentPrice;
+                  const gain = currentValue - investedAmount;
+                  const gainPct = investedAmount > 0 ? (gain / investedAmount) * 100 : 0;
+                  const isGain = gain >= 0;
+                  
                   return (
                     <tr key={h.id} style={{ borderBottom: '1px solid #e2e8f0' }}>
                       <td style={tdStyle}><strong>{h.stockSymbol}</strong></td>
                       <td style={tdStyle}>{h.stockName}</td>
                       <td style={tdStyle}>{h.quantity}</td>
                       <td style={tdStyle}>{formatINR(h.purchasePrice)}</td>
-                      <td style={tdStyle}>{formatINR(h.purchasePrice)}</td>
+                      <td style={tdStyle}>
+                        {h.priceError ? (
+                          <span style={{ color: '#ef4444', fontSize: 11 }}>Error</span>
+                        ) : (
+                          formatINR(currentPrice)
+                        )}
+                      </td>
                       <td style={tdStyle}>{formatINR(investedAmount)}</td>
                       <td style={tdStyle}>{formatINR(currentValue)}</td>
-                      <td style={{ ...tdStyle, color: '#94a3b8' }}>
+                      <td style={{ ...tdStyle, color: isGain ? '#22c55e' : '#ef4444', fontWeight: 600 }}>
                         {formatINR(gain)} ({formatPct(gainPct)})
                       </td>
                       <td style={tdStyle}>

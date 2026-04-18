@@ -1,4 +1,5 @@
 // Netlify Function to fetch real-time stock prices
+// Uses Indian-Stock-Market-API for NSE/BSE stocks
 // This avoids CORS issues by proxying through Netlify
 
 exports.handler = async (event) => {
@@ -12,46 +13,45 @@ exports.handler = async (event) => {
   }
 
   try {
-    // Try Alpha Vantage API
-    const alphaResponse = await fetch(
-      `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=demo`,
-      { timeout: 5000 }
-    );
+    // Use Indian-Stock-Market-API for real-time prices
+    // Supports NSE (.NS) and BSE (.BO) suffixes
+    const apiUrl = `https://nse-api-ruby.vercel.app/stock?symbol=${symbol}&res=num`;
+    
+    const response = await fetch(apiUrl, {
+      headers: {
+        'Accept': 'application/json',
+      },
+    });
 
-    if (alphaResponse.ok) {
-      const data = await alphaResponse.json();
-      const price = parseFloat(data['05. price']);
-      
-      if (!isNaN(price) && price > 0) {
-        return {
-          statusCode: 200,
-          body: JSON.stringify({ symbol, price, source: 'alpha-vantage' }),
-        };
-      }
+    if (!response.ok) {
+      console.error(`API returned status ${response.status} for symbol ${symbol}`);
+      return {
+        statusCode: 404,
+        body: JSON.stringify({ error: `Could not fetch price for ${symbol}` }),
+      };
     }
 
-    // Try using a free CORS proxy with Yahoo Finance
-    const yahooResponse = await fetch(
-      `https://query1.finance.yahoo.com/v10/finance/quoteSummary/${symbol}?modules=price`,
-      { timeout: 5000 }
-    );
-
-    if (yahooResponse.ok) {
-      const data = await yahooResponse.json();
-      const price = data?.quoteSummary?.result?.[0]?.price?.regularMarketPrice?.raw;
-      
-      if (price && price > 0) {
-        return {
-          statusCode: 200,
-          body: JSON.stringify({ symbol, price, source: 'yahoo-finance' }),
-        };
-      }
+    const data = await response.json();
+    
+    // Extract price from response
+    // The API returns data in format: { "symbol": "...", "price": 123.45, ... }
+    const price = data?.price || data?.lastPrice || data?.current_price;
+    
+    if (price && !isNaN(parseFloat(price)) && parseFloat(price) > 0) {
+      return {
+        statusCode: 200,
+        body: JSON.stringify({ 
+          symbol, 
+          price: parseFloat(price), 
+          source: 'indian-stock-market-api',
+          timestamp: new Date().toISOString()
+        }),
+      };
     }
 
-    // Fallback: return error
     return {
       statusCode: 404,
-      body: JSON.stringify({ error: `Could not fetch price for ${symbol}` }),
+      body: JSON.stringify({ error: `Invalid price data for ${symbol}` }),
     };
   } catch (error) {
     console.error(`Error fetching price for ${symbol}:`, error);
