@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { AuthUser, onAuthStateChange } from '../api/auth';
+import { ensureUserDataIsolation } from '../utils/setupUserData';
 
 interface AuthContextType {
   user: AuthUser | null;
@@ -15,8 +16,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     // Listen to auth state changes
-    const subscription = onAuthStateChange((currentUser) => {
+    const subscription = onAuthStateChange(async (currentUser) => {
       setUser(currentUser);
+      
+      // If user just logged in, set up data isolation
+      if (currentUser?.id) {
+        await ensureUserDataIsolation(currentUser.id);
+      }
+      
       setIsLoading(false);
     });
 

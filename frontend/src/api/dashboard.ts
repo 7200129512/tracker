@@ -12,8 +12,8 @@ export const useDashboardSummary = (month: string) => {
       if (!user?.id) throw new Error('User not authenticated');
 
       try {
-        // Fetch income entries - for now, get all (user_id column doesn't exist yet)
-        const incomeRes = await supabaseClient.get('/income_entries?select=source_name,amount,frequency');
+        // Fetch income entries for current user ONLY
+        const incomeRes = await supabaseClient.get(`/income_entries?user_id=eq.${user.id}&select=source_name,amount,frequency`);
         
         // Calculate income: exclude PF and Variable Pay from monthly income
         let totalIncome = 0;
@@ -36,20 +36,20 @@ export const useDashboardSummary = (month: string) => {
           }
         });
 
-        // Fetch expense entries - for now, get all
-        const expenseRes = await supabaseClient.get('/expense_entries?select=amount');
+        // Fetch expense entries for current user ONLY
+        const expenseRes = await supabaseClient.get(`/expense_entries?user_id=eq.${user.id}&select=amount`);
         const totalExpenses = expenseRes.data.reduce((sum: number, row: any) => sum + parseFloat(row.amount || 0), 0);
 
-        // Fetch loans - for now, get all
-        const loanRes = await supabaseClient.get('/loans?select=outstanding_principal&is_closed=eq.false');
+        // Fetch loans for current user ONLY
+        const loanRes = await supabaseClient.get(`/loans?user_id=eq.${user.id}&select=outstanding_principal&is_closed=eq.false`);
         const outstandingLoanPrincipal = loanRes.data.reduce((sum: number, row: any) => sum + parseFloat(row.outstanding_principal || 0), 0);
 
-        // Fetch investments - for now, get all
-        const investRes = await supabaseClient.get('/investment_holdings?is_closed=eq.false&select=quantity,purchase_price');
+        // Fetch investments for current user ONLY
+        const investRes = await supabaseClient.get(`/investment_holdings?user_id=eq.${user.id}&is_closed=eq.false&select=quantity,purchase_price`);
         const portfolioInvestedValue = investRes.data.reduce((sum: number, row: any) => sum + (parseFloat(row.quantity || 0) * parseFloat(row.purchase_price || 0)), 0);
 
-        // Fetch savings - for now, get all
-        const savingsRes = await supabaseClient.get('/savings_transactions?select=type,amount');
+        // Fetch savings for current user ONLY
+        const savingsRes = await supabaseClient.get(`/savings_transactions?user_id=eq.${user.id}&select=type,amount`);
         const savingsBalance = savingsRes.data.reduce((sum: number, row: any) => {
           const amount = parseFloat(row.amount || 0);
           return row.type === 'Deposit' ? sum + amount : sum - amount;
@@ -93,8 +93,8 @@ export const useCashFlow = () => {
       if (!user?.id) throw new Error('User not authenticated');
 
       try {
-        const incomeRes = await supabaseClient.get('/income_entries?select=effective_date,amount,source_name');
-        const expenseRes = await supabaseClient.get('/expense_entries?select=date,amount');
+        const incomeRes = await supabaseClient.get(`/income_entries?user_id=eq.${user.id}&select=effective_date,amount,source_name`);
+        const expenseRes = await supabaseClient.get(`/expense_entries?user_id=eq.${user.id}&select=date,amount`);
         
         // Combine and group by month, excluding PF and Variable Pay from income
         const allData = [
@@ -138,8 +138,8 @@ export const useDashboardAlerts = (month: string) => {
       if (!user?.id) throw new Error('User not authenticated');
 
       try {
-        // Fetch loans to check for EMI reminders
-        const loanRes = await supabaseClient.get('/loans?is_closed=eq.false&select=id,loan_name');
+        // Fetch loans for current user ONLY
+        const loanRes = await supabaseClient.get(`/loans?user_id=eq.${user.id}&is_closed=eq.false&select=id,loan_name`);
         const emiReminder = loanRes.data.length > 0;
         const emiReminderLoanName = loanRes.data.length > 0 ? loanRes.data[0].loan_name : undefined;
 

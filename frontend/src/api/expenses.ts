@@ -1,27 +1,38 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabaseClient } from './client';
+import { useAuth } from '../context/AuthContext';
 import type { ExpenseEntry } from '../types';
 
-export const useExpenseEntries = (month?: string) =>
-  useQuery<ExpenseEntry[]>({
-    queryKey: ['expenses', month],
+export const useExpenseEntries = (month?: string) => {
+  const { user } = useAuth();
+
+  return useQuery<ExpenseEntry[]>({
+    queryKey: ['expenses', month, user?.id],
     queryFn: async () => {
+      if (!user?.id) throw new Error('User not authenticated');
+
       try {
-        const res = await supabaseClient.get('/expense_entries?order=id.desc');
+        const res = await supabaseClient.get(`/expense_entries?user_id=eq.${user.id}&order=id.desc`);
         return res.data;
       } catch (error) {
         console.error('Expenses error:', error);
         return [];
       }
     },
+    enabled: !!user?.id,
   });
+};
 
-export const useMonthlySummary = () =>
-  useQuery<{ month: string; expenses: number }[]>({
-    queryKey: ['expenses', 'monthly-summary'],
+export const useMonthlySummary = () => {
+  const { user } = useAuth();
+
+  return useQuery<{ month: string; expenses: number }[]>({
+    queryKey: ['expenses', 'monthly-summary', user?.id],
     queryFn: async () => {
+      if (!user?.id) throw new Error('User not authenticated');
+
       try {
-        const res = await supabaseClient.get('/expense_entries?select=*');
+        const res = await supabaseClient.get(`/expense_entries?user_id=eq.${user.id}&select=*`);
         return res.data.map((row: any) => ({
           month: new Date(row.date).toISOString().slice(0, 7),
           expenses: parseFloat(row.amount || 0)
@@ -31,14 +42,20 @@ export const useMonthlySummary = () =>
         return [];
       }
     },
+    enabled: !!user?.id,
   });
+};
 
-export const useCategoryBreakdown = (month: string) =>
-  useQuery<{ category: string; amount: number; percentage: number }[]>({
-    queryKey: ['expenses', 'category-breakdown', month],
+export const useCategoryBreakdown = (month: string) => {
+  const { user } = useAuth();
+
+  return useQuery<{ category: string; amount: number; percentage: number }[]>({
+    queryKey: ['expenses', 'category-breakdown', month, user?.id],
     queryFn: async () => {
+      if (!user?.id) throw new Error('User not authenticated');
+
       try {
-        const res = await supabaseClient.get('/expense_entries?select=category,amount');
+        const res = await supabaseClient.get(`/expense_entries?user_id=eq.${user.id}&select=category,amount`);
         const total = res.data.reduce((sum: number, row: any) => sum + parseFloat(row.amount || 0), 0);
         const grouped = res.data.reduce((acc: any, row: any) => {
           const cat = row.category || 'Other';
@@ -57,31 +74,45 @@ export const useCategoryBreakdown = (month: string) =>
         return [];
       }
     },
+    enabled: !!user?.id,
   });
+};
 
 export const useAddExpense = () => {
+  const { user } = useAuth();
   const qc = useQueryClient();
+  
   return useMutation({
-    mutationFn: (data: Omit<ExpenseEntry, 'id'>) => 
-      supabaseClient.post('/expense_entries', data),
+    mutationFn: (data: Omit<ExpenseEntry, 'id'>) => {
+      if (!user?.id) throw new Error('User not authenticated');
+      return supabaseClient.post('/expense_entries', { ...data, user_id: user.id });
+    },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['expenses'] }),
   });
 };
 
 export const useUpdateExpense = () => {
+  const { user } = useAuth();
   const qc = useQueryClient();
+  
   return useMutation({
-    mutationFn: ({ id, ...data }: ExpenseEntry) => 
-      supabaseClient.patch(`/expense_entries?id=eq.${id}`, data),
+    mutationFn: ({ id, ...data }: ExpenseEntry) => {
+      if (!user?.id) throw new Error('User not authenticated');
+      return supabaseClient.patch(`/expense_entries?id=eq.${id}&user_id=eq.${user.id}`, data);
+    },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['expenses'] }),
   });
 };
 
 export const useDeleteExpense = () => {
+  const { user } = useAuth();
   const qc = useQueryClient();
+  
   return useMutation({
-    mutationFn: (id: number) => 
-      supabaseClient.delete(`/expense_entries?id=eq.${id}`),
+    mutationFn: (id: number) => {
+      if (!user?.id) throw new Error('User not authenticated');
+      return supabaseClient.delete(`/expense_entries?id=eq.${id}&user_id=eq.${user.id}`);
+    },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['expenses'] }),
   });
 };

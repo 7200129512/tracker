@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabaseClient } from './client';
+import { useAuth } from '../context/AuthContext';
 import type { InvestmentHolding, SellTransaction } from '../types';
 
 // Map snake_case database fields to camelCase TypeScript types
@@ -25,12 +26,16 @@ const mapTransaction = (row: any): SellTransaction => ({
   realisedGain: parseFloat(row.realised_gain || 0),
 });
 
-export const useHoldings = () =>
-  useQuery<InvestmentHolding[]>({
-    queryKey: ['investments', 'holdings'],
+export const useHoldings = () => {
+  const { user } = useAuth();
+
+  return useQuery<InvestmentHolding[]>({
+    queryKey: ['investments', 'holdings', user?.id],
     queryFn: async () => {
+      if (!user?.id) throw new Error('User not authenticated');
+
       try {
-        const res = await supabaseClient.get('/investment_holdings?is_closed=eq.false&order=id.desc');
+        const res = await supabaseClient.get(`/investment_holdings?user_id=eq.${user.id}&is_closed=eq.false&order=id.desc`);
         return res.data.map(mapHolding);
       } catch (error) {
         console.error('Holdings error:', error);
@@ -38,26 +43,38 @@ export const useHoldings = () =>
       }
     },
     refetchInterval: 60000,
+    enabled: !!user?.id,
   });
+};
 
-export const useClosedPositions = () =>
-  useQuery<InvestmentHolding[]>({
-    queryKey: ['investments', 'closed'],
+export const useClosedPositions = () => {
+  const { user } = useAuth();
+
+  return useQuery<InvestmentHolding[]>({
+    queryKey: ['investments', 'closed', user?.id],
     queryFn: async () => {
+      if (!user?.id) throw new Error('User not authenticated');
+
       try {
-        const res = await supabaseClient.get('/investment_holdings?is_closed=eq.true&order=id.desc');
+        const res = await supabaseClient.get(`/investment_holdings?user_id=eq.${user.id}&is_closed=eq.true&order=id.desc`);
         return res.data.map(mapHolding);
       } catch (error) {
         console.error('Closed positions error:', error);
         return [];
       }
     },
+    enabled: !!user?.id,
   });
+};
 
-export const useHoldingTransactions = (holdingId: number) =>
-  useQuery<SellTransaction[]>({
-    queryKey: ['investments', holdingId, 'transactions'],
+export const useHoldingTransactions = (holdingId: number) => {
+  const { user } = useAuth();
+
+  return useQuery<SellTransaction[]>({
+    queryKey: ['investments', holdingId, 'transactions', user?.id],
     queryFn: async () => {
+      if (!user?.id) throw new Error('User not authenticated');
+
       try {
         const res = await supabaseClient.get(`/sell_transactions?holding_id=eq.${holdingId}&order=id.desc`);
         return res.data.map(mapTransaction);
@@ -66,18 +83,24 @@ export const useHoldingTransactions = (holdingId: number) =>
         return [];
       }
     },
+    enabled: !!user?.id,
   });
+};
 
 export const useAddHolding = () => {
+  const { user } = useAuth();
   const qc = useQueryClient();
+  
   return useMutation({
     mutationFn: (data: Omit<InvestmentHolding, 'id' | 'isClosed' | 'currentPrice' | 'priceStale' | 'priceFetchedAt'>) => {
+      if (!user?.id) throw new Error('User not authenticated');
       const payload = {
         stock_symbol: data.stockSymbol,
         stock_name: data.stockName,
         quantity: data.quantity,
         purchase_price: data.purchasePrice,
         purchase_date: data.purchaseDate,
+        user_id: user.id,
       };
       return supabaseClient.post('/investment_holdings', payload);
     },
@@ -86,31 +109,41 @@ export const useAddHolding = () => {
 };
 
 export const useUpdateHolding = () => {
+  const { user } = useAuth();
   const qc = useQueryClient();
+  
   return useMutation({
     mutationFn: ({ id, ...data }: Partial<InvestmentHolding> & { id: number }) => {
+      if (!user?.id) throw new Error('User not authenticated');
       const payload: any = {};
       if (data.stockSymbol) payload.stock_symbol = data.stockSymbol;
       if (data.stockName) payload.stock_name = data.stockName;
       if (data.quantity !== undefined) payload.quantity = data.quantity;
       if (data.purchasePrice !== undefined) payload.purchase_price = data.purchasePrice;
       if (data.purchaseDate) payload.purchase_date = data.purchaseDate;
-      return supabaseClient.patch(`/investment_holdings?id=eq.${id}`, payload);
+      return supabaseClient.patch(`/investment_holdings?id=eq.${id}&user_id=eq.${user.id}`, payload);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['investments'] }),
   });
 };
 
 export const useDeleteHolding = () => {
+  const { user } = useAuth();
   const qc = useQueryClient();
+  
   return useMutation({
-    mutationFn: (id: number) => supabaseClient.delete(`/investment_holdings?id=eq.${id}`),
+    mutationFn: (id: number) => {
+      if (!user?.id) throw new Error('User not authenticated');
+      return supabaseClient.delete(`/investment_holdings?id=eq.${id}&user_id=eq.${user.id}`);
+    },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['investments'] }),
   });
 };
 
 export const useSellHolding = () => {
+  const { user } = useAuth();
   const qc = useQueryClient();
+  
   return useMutation({
     mutationFn: ({
       holdingId,
@@ -123,6 +156,7 @@ export const useSellHolding = () => {
       sellPrice: number;
       sellDate: string;
     }) => {
+      if (!user?.id) throw new Error('User not authenticated');
       // Calculate realised gain
       const realizedGain = (sellPrice - 0) * quantitySold; // Simplified calculation
       return supabaseClient.post('/sell_transactions', {
@@ -138,9 +172,12 @@ export const useSellHolding = () => {
 };
 
 export const useRefreshPrices = () => {
+  const { user } = useAuth();
   const qc = useQueryClient();
+  
   return useMutation({
     mutationFn: () => {
+      if (!user?.id) throw new Error('User not authenticated');
       // This would typically call a backend endpoint to refresh prices
       // For now, just invalidate the cache
       return Promise.resolve();
