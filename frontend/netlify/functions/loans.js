@@ -1,3 +1,17 @@
+const { Pool } = require('pg');
+
+let pool;
+
+function getPool() {
+  if (!pool) {
+    pool = new Pool({
+      connectionString: process.env.DATABASE_URL,
+      ssl: { rejectUnauthorized: false }
+    });
+  }
+  return pool;
+}
+
 exports.handler = async (event, context) => {
   // Enable CORS
   const headers = {
@@ -17,25 +31,13 @@ exports.handler = async (event, context) => {
   }
 
   try {
-    const staticLoanData = [
-      {
-        id: 1,
-        loan_name: 'Car Loan',
-        original_principal: '1054000.00',
-        outstanding_principal: '1054000.00',
-        emi_amount: '18552.00',
-        interest_rate_pa: '9.0000',
-        emi_start_date: '2026-04-01T00:00:00.000Z',
-        is_closed: false,
-        created_at: '2026-04-18T07:39:01.873Z',
-        updated_at: '2026-04-18T07:39:01.873Z'
-      }
-    ];
-
+    const pool = getPool();
+    const result = await pool.query('SELECT * FROM loans ORDER BY created_at DESC');
+    
     return {
       statusCode: 200,
       headers,
-      body: JSON.stringify({ data: staticLoanData })
+      body: JSON.stringify({ data: result.rows })
     };
   } catch (error) {
     console.error('Loans API error:', error);

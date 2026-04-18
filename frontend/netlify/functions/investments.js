@@ -1,3 +1,17 @@
+const { Pool } = require('pg');
+
+let pool;
+
+function getPool() {
+  if (!pool) {
+    pool = new Pool({
+      connectionString: process.env.DATABASE_URL,
+      ssl: { rejectUnauthorized: false }
+    });
+  }
+  return pool;
+}
+
 exports.handler = async (event, context) => {
   // Enable CORS
   const headers = {
@@ -17,12 +31,13 @@ exports.handler = async (event, context) => {
   }
 
   try {
-    const staticInvestmentData = [];
-
+    const pool = getPool();
+    const result = await pool.query('SELECT * FROM investment_holdings ORDER BY created_at DESC');
+    
     return {
       statusCode: 200,
       headers,
-      body: JSON.stringify({ data: staticInvestmentData })
+      body: JSON.stringify({ data: result.rows })
     };
   } catch (error) {
     console.error('Investments API error:', error);
