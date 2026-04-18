@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { PieChart, Pie, Cell, Legend, Tooltip } from 'recharts';
 import {
   useHoldings, useClosedPositions, useAddHolding,
-  useDeleteHolding, useSellHolding, useRefreshPrices,
+  useDeleteHolding,
 } from '../api/investments';
 import type { InvestmentHolding } from '../types';
 import { formatINR, formatPct } from '../utils/format';
@@ -22,13 +22,47 @@ export default function InvestmentsPage() {
   const { data: closed = [] } = useClosedPositions();
   const addHolding = useAddHolding();
   const deleteHolding = useDeleteHolding();
-  const sellHolding = useSellHolding();
-  const refreshPrices = useRefreshPrices();
 
   const [form, setForm] = useState(EMPTY);
-  const [sellForm, setSellForm] = useState({ holdingId: 0, quantitySold: 0, sellPrice: 0, sellDate: new Date().toISOString().slice(0, 10) });
-  const [showSell, setShowSell] = useState<number | null>(null);
   const [error, setError] = useState('');
+  const [currentPrices, setCurrentPrices] = useState<{ [key: string]: number }>({});
+  const [loadingPrices, setLoadingPrices] = useState(false);
+
+  // Fetch current prices for all holdings
+  useEffect(() => {
+    if (holdings.length === 0) return;
+    
+    const fetchPrices = async () => {
+      setLoadingPrices(true);
+      const prices: { [key: string]: number } = {};
+      
+      for (const holding of holdings) {
+        try {
+          // Using a free stock API - you can replace with your preferred API
+          const response = await fetch(
+            `https://api.example.com/quote/${holding.stockSymbol}`,
+            { signal: AbortSignal.timeout(5000) }
+          ).catch(() => null);
+          
+          if (response?.ok) {
+            const data = await response.json();
+            prices[holding.stockSymbol] = data.price || holding.purchasePrice;
+          } else {
+            // Fallback to purchase price if API fails
+            prices[holding.stockSymbol] = holding.purchasePrice;
+          }
+        } catch (err) {
+          // Fallback to purchase price if API fails
+          prices[holding.stockSymbol] = holding.purchasePrice;
+        }
+      }
+      
+      setCurrentPrices(prices);
+      setLoadingPrices(false);
+    };
+
+    fetchPrices();
+  }, [holdings]);
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,24 +75,16 @@ export default function InvestmentsPage() {
     }
   };
 
-  const handleSell = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    try {
-      await sellHolding.mutateAsync(sellForm);
-      setShowSell(null);
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Error recording sell');
-    }
-  };
-
   const totalInvested = holdings.reduce((s, h) => s + h.quantity * h.purchasePrice, 0);
-  const totalCurrent = holdings.reduce((s, h) => s + h.quantity * (h.currentPrice ?? h.purchasePrice), 0);
+  const totalCurrent = holdings.reduce((s, h) => {
+    const curPrice = currentPrices[h.stockSymbol] || h.purchasePrice;
+    return s + h.quantity * curPrice;
+  }, 0);
   const totalGain = totalCurrent - totalInvested;
 
   const allocationData = holdings
-    .filter((h) => h.currentPrice)
-    .map((h) => ({ name: h.stockSymbol, value: h.quantity * (h.currentPrice ?? 0) }));
+    .filter((h) => currentPrices[h.stockSymbol])
+    .map((h) => ({ name: h.stockSymbol, value: h.quantity * (currentPrices[h.stockSymbol] || 0) }));
 
   return (
     <div>
@@ -73,13 +99,7 @@ export default function InvestmentsPage() {
           value={`${formatINR(totalGain)} (${totalInvested > 0 ? formatPct((totalGain / totalInvested) * 100) : '0%'})`}
           color={totalGain >= 0 ? '#22c55e' : '#ef4444'}
         />
-        <button
-          onClick={() => refreshPrices.mutate()}
-          disabled={refreshPrices.isPending}
-          style={{ ...btnStyle('#0ea5e9'), alignSelf: 'center' }}
-        >
-          {refreshPrices.isPending ? 'Refreshing…' : '🔄 Refresh Prices'}
-        </button>
+        {loadingPrices && <div style={{ alignSelf: 'center', color: '#64748b' }}>Fetching prices...</div>}
       </div>
 
       {/* Add form */}
@@ -116,7 +136,7 @@ export default function InvestmentsPage() {
               </thead>
               <tbody>
                 {holdings.map((h) => {
-                  const curPrice = h.currentPrice ?? h.purchasePrice;
+                  const curPrice = currentPrices[h.stockSymbol] || h.purchasePrice;
                   const value = h.quantity * curPrice;
                   const gain = (curPrice - h.purchasePrice) * h.quantity;
                   const gainPct = h.purchasePrice > 0 ? (gain / (h.purchasePrice * h.quantity)) * 100 : 0;
@@ -124,27 +144,16 @@ export default function InvestmentsPage() {
                     <tr key={h.id} style={{ borderBottom: '1px solid #e2e8f0' }}>
                       <td style={tdStyle}>
                         <strong>{h.stockSymbol}</strong>
-                        {h.priceStale && (
-                          <span style={{ marginLeft: 4, fontSize: 10, background: '#fef3c7', color: '#92400e', borderRadius: 3, padding: '1px 5px' }}>
-                            STALE {h.priceFetchedAt ? new Date(h.priceFetchedAt).toLocaleTimeString() : ''}
-                          </span>
-                        )}
                       </td>
                       <td style={tdStyle}>{h.stockName}</td>
                       <td style={tdStyle}>{h.quantity}</td>
                       <td style={tdStyle}>{formatINR(h.purchasePrice)}</td>
-                      <td style={tdStyle}>{h.currentPrice ? formatINR(h.currentPrice) : '—'}</td>
+                      <td style={tdStyle}>{formatINR(curPrice)}</td>
                       <td style={tdStyle}>{formatINR(value)}</td>
                       <td style={{ ...tdStyle, color: gain >= 0 ? '#16a34a' : '#dc2626' }}>
                         {formatINR(gain)} ({formatPct(gainPct)})
                       </td>
                       <td style={tdStyle}>
-                        <button
-                          onClick={() => { setShowSell(h.id); setSellForm({ holdingId: h.id, quantitySold: 0, sellPrice: 0, sellDate: new Date().toISOString().slice(0, 10) }); }}
-                          style={smallBtn('#f59e0b')}
-                        >
-                          Sell
-                        </button>
                         <button onClick={() => deleteHolding.mutate(h.id)} style={smallBtn('#ef4444')}>Delete</button>
                       </td>
                     </tr>
@@ -155,20 +164,6 @@ export default function InvestmentsPage() {
           </div>
         )}
       </div>
-
-      {/* Sell form */}
-      {showSell !== null && (
-        <div style={{ ...cardStyle, marginTop: 16, border: '2px solid #f59e0b' }}>
-          <h3 style={{ marginBottom: 12 }}>Record Sell Transaction</h3>
-          <form onSubmit={handleSell} style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-            <input type="number" placeholder="Quantity Sold" value={sellForm.quantitySold || ''} onChange={(e) => setSellForm({ ...sellForm, quantitySold: Number(e.target.value) })} required min={0.0001} step={0.0001} style={{ ...inputStyle, width: 140 }} />
-            <input type="number" placeholder="Sell Price (₹)" value={sellForm.sellPrice || ''} onChange={(e) => setSellForm({ ...sellForm, sellPrice: Number(e.target.value) })} required min={0.01} step={0.01} style={{ ...inputStyle, width: 140 }} />
-            <input type="date" value={sellForm.sellDate} onChange={(e) => setSellForm({ ...sellForm, sellDate: e.target.value })} required style={inputStyle} />
-            <button type="submit" style={btnStyle('#f59e0b')}>Confirm Sell</button>
-            <button type="button" onClick={() => setShowSell(null)} style={btnStyle('#94a3b8')}>Cancel</button>
-          </form>
-        </div>
-      )}
 
       {/* Allocation chart */}
       {allocationData.length > 0 && (
