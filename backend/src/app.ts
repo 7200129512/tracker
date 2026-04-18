@@ -11,6 +11,7 @@ import savingsRouter from './routes/savings';
 import dashboardRouter from './routes/dashboard';
 import dataManagementRouter from './routes/dataManagement';
 import monthlyNotesRouter from './routes/monthlyNotes';
+import pricesRouter from './routes/prices';
 
 const app = express();
 
@@ -34,6 +35,7 @@ app.use('/api/v1/savings', savingsRouter);
 app.use('/api/v1/dashboard', dashboardRouter);
 app.use('/api/v1/data', dataManagementRouter);
 app.use('/api/v1/notes', monthlyNotesRouter);
+app.use('/api/v1/prices', pricesRouter);
 
 // Root API info
 app.get('/api/v1', (_req, res) => {

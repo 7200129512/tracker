@@ -17,48 +17,18 @@ const EMPTY = {
   purchaseDate: new Date().toISOString().slice(0, 10),
 };
 
-// Free stock market APIs
-const STOCK_APIS = {
-  // Using Alpha Vantage (free tier, 5 calls/min)
-  ALPHA_VANTAGE: 'https://www.alphavantage.co/query',
-  // Using Finnhub (free tier)
-  FINNHUB: 'https://finnhub.io/api/v1/quote',
-  // Using Polygon.io (free tier)
-  POLYGON: 'https://api.polygon.io/v1/open-close',
-};
-
-// Function to fetch current stock price from multiple APIs
+// Function to fetch current stock price from backend API
 const fetchStockPrice = async (symbol: string): Promise<number | null> => {
   try {
-    // Try Alpha Vantage first (works for Indian stocks with .NS or .BO suffix)
-    const alphaResponse = await fetch(
-      `${STOCK_APIS.ALPHA_VANTAGE}?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=demo`,
-      { signal: AbortSignal.timeout(5000) }
-    ).catch(() => null);
+    const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+    const response = await fetch(`${apiUrl}/api/v1/prices/${symbol}`, {
+      signal: AbortSignal.timeout(10000)
+    });
 
-    if (alphaResponse?.ok) {
-      const data = await alphaResponse.json();
-      const price = parseFloat(data['05. price']);
-      if (!isNaN(price) && price > 0) {
-        return price;
-      }
+    if (response.ok) {
+      const data = await response.json();
+      return data.price || null;
     }
-
-    // Try Yahoo Finance API via RapidAPI (free tier available)
-    // Note: You may need to add your own API key for production
-    const yahooResponse = await fetch(
-      `https://query1.finance.yahoo.com/v10/finance/quoteSummary/${symbol}?modules=price`,
-      { signal: AbortSignal.timeout(5000) }
-    ).catch(() => null);
-
-    if (yahooResponse?.ok) {
-      const data = await yahooResponse.json();
-      const price = data?.quoteSummary?.result?.[0]?.price?.regularMarketPrice?.raw;
-      if (price && price > 0) {
-        return price;
-      }
-    }
-
     return null;
   } catch (error) {
     console.error(`Error fetching price for ${symbol}:`, error);
@@ -90,9 +60,11 @@ export default function InvestmentsPage() {
         const price = await fetchStockPrice(holding.stockSymbol);
         if (price) {
           prices[holding.stockSymbol] = price;
+          console.log(`${holding.stockSymbol}: ₹${price}`);
         } else {
           // Fallback to purchase price if API fails
           prices[holding.stockSymbol] = holding.purchasePrice;
+          console.warn(`Failed to fetch price for ${holding.stockSymbol}, using purchase price`);
         }
       }
       
