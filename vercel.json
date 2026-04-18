@@ -1,37 +1,46 @@
 {
   "version": 2,
-  "buildCommand": "npm run build --workspace=frontend",
-  "outputDirectory": "frontend/dist",
-  "installCommand": "npm install",
-  "framework": "vite",
-  "rewrites": [
+  "builds": [
     {
-      "source": "/api/v1/dashboard/summary",
-      "destination": "/api/dashboard"
+      "src": "frontend/package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "dist"
+      }
     },
     {
-      "source": "/api/v1/income",
-      "destination": "/api/income"
+      "src": "api/*.js",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/v1/dashboard/summary",
+      "dest": "/api/dashboard"
     },
     {
-      "source": "/api/v1/expenses",
-      "destination": "/api/expenses"
+      "src": "/api/v1/income",
+      "dest": "/api/income"
     },
     {
-      "source": "/api/v1/loans",
-      "destination": "/api/loans"
+      "src": "/api/v1/expenses",
+      "dest": "/api/expenses"
     },
     {
-      "source": "/api/v1/investments",
-      "destination": "/api/investments"
+      "src": "/api/v1/loans",
+      "dest": "/api/loans"
     },
     {
-      "source": "/api/v1/savings",
-      "destination": "/api/savings"
+      "src": "/api/v1/investments",
+      "dest": "/api/investments"
     },
     {
-      "source": "/(.*)",
-      "destination": "/index.html"
+      "src": "/api/v1/savings",
+      "dest": "/api/savings"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/frontend/$1"
     }
   ]
 }
