@@ -20,8 +20,8 @@ export const useDashboardSummary = (month: string) =>
           const sourceName = row.source_name?.toLowerCase() || '';
           
           if (sourceName.includes('pf')) {
-            // PF is tracked separately, not added to monthly income
-            pfAmount = amount;
+            // Sum all PF entries (both one-time and monthly)
+            pfAmount += amount;
           } else if (sourceName.includes('variable')) {
             // Variable pay is tracked separately, not added to monthly income
             variablePayAmount = amount;
