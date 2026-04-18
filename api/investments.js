@@ -1,17 +1,3 @@
-const { Pool } = require('pg');
-
-let pool;
-
-function getPool() {
-  if (!pool) {
-    pool = new Pool({
-      connectionString: process.env.DATABASE_URL,
-      ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
-    });
-  }
-  return pool;
-}
-
 module.exports = async (req, res) => {
   // Enable CORS with more permissive headers
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -25,9 +11,10 @@ module.exports = async (req, res) => {
   }
 
   try {
-    const pool = getPool();
-    const result = await pool.query('SELECT * FROM investment_holdings ORDER BY created_at DESC');
-    res.status(200).json({ data: result.rows });
+    // Return empty investments data for now (you can add investments later)
+    const staticInvestmentData = [];
+
+    res.status(200).json({ data: staticInvestmentData });
   } catch (error) {
     console.error('Investments API error:', error);
     res.status(500).json({ 

@@ -1,17 +1,3 @@
-const { Pool } = require('pg');
-
-let pool;
-
-function getPool() {
-  if (!pool) {
-    pool = new Pool({
-      connectionString: process.env.DATABASE_URL,
-      ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
-    });
-  }
-  return pool;
-}
-
 module.exports = async (req, res) => {
   // Enable CORS with more permissive headers
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -25,9 +11,29 @@ module.exports = async (req, res) => {
   }
 
   try {
-    const pool = getPool();
-    const result = await pool.query('SELECT * FROM income_entries ORDER BY effective_date DESC');
-    res.status(200).json({ data: result.rows });
+    // Return static income data for now
+    const staticIncomeData = [
+      {
+        id: 1,
+        source_name: 'Salary',
+        amount: '138086.00',
+        frequency: 'monthly',
+        effective_date: '2026-04-01T00:00:00.000Z',
+        created_at: '2026-04-18T07:39:01.873Z',
+        updated_at: '2026-04-18T07:39:01.873Z'
+      },
+      {
+        id: 2,
+        source_name: 'Variable Pay',
+        amount: '42000.00',
+        frequency: 'annual',
+        effective_date: '2026-03-01T00:00:00.000Z',
+        created_at: '2026-04-18T07:39:01.873Z',
+        updated_at: '2026-04-18T07:39:01.873Z'
+      }
+    ];
+
+    res.status(200).json({ data: staticIncomeData });
   } catch (error) {
     console.error('Income API error:', error);
     res.status(500).json({ 
