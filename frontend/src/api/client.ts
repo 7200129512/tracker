@@ -1,6 +1,7 @@
 import axios from 'axios';
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+// Use the deployed URL directly for production
+const BASE_URL = 'https://my-finance-ten-iota.vercel.app';
 
 export const apiClient = axios.create({
   baseURL: `${BASE_URL}/api/v1`,
