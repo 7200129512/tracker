@@ -1,7 +1,7 @@
 import axios from 'axios';
 
-// Use the deployed URL directly for production
-const BASE_URL = 'https://my-finance-ten-iota.vercel.app';
+// Use the deployed Netlify URL
+const BASE_URL = 'https://tracker-2026-app.netlify.app';
 
 export const apiClient = axios.create({
   baseURL: `${BASE_URL}/api/v1`,
