@@ -57,10 +57,12 @@ export default function IncomePage() {
   };
 
   // Calculate income breakdown based on source name
-  const getIncomeType = (sourceName: string): string => {
-    if (sourceName.toLowerCase().includes('salary')) return 'base';
-    if (sourceName.toLowerCase().includes('variable')) return 'variable';
-    if (sourceName.toLowerCase().includes('pf')) return 'pf';
+  const getIncomeType = (sourceName: string | undefined): string => {
+    if (!sourceName) return 'other';
+    const lower = sourceName.toLowerCase();
+    if (lower.includes('salary')) return 'base';
+    if (lower.includes('variable')) return 'variable';
+    if (lower.includes('pf')) return 'pf';
     return 'other';
   };
 
