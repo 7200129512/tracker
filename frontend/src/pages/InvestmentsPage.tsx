@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useHoldings, useClosedPositions, useAddHolding, useDeleteHolding } from '../api/investments';
 import type { InvestmentHolding } from '../types';
 import { formatINR, formatPct } from '../utils/format';
@@ -11,6 +11,28 @@ const EMPTY = {
   purchaseDate: new Date().toISOString().slice(0, 10),
 };
 
+// Fetch current stock price from Netlify function
+const fetchStockPrice = async (symbol: string): Promise<number | null> => {
+  try {
+    const response = await fetch(
+      `/.netlify/functions/stock-price?symbol=${encodeURIComponent(symbol)}`,
+      { signal: AbortSignal.timeout(10000) }
+    );
+
+    if (response.ok) {
+      const data = await response.json();
+      const price = parseFloat(data.price);
+      if (!isNaN(price) && price > 0) {
+        return price;
+      }
+    }
+    return null;
+  } catch (error) {
+    console.error(`Error fetching price for ${symbol}:`, error);
+    return null;
+  }
+};
+
 export default function InvestmentsPage() {
   const { data: holdings = [], isLoading } = useHoldings();
   const { data: closed = [] } = useClosedPositions();
@@ -18,6 +40,36 @@ export default function InvestmentsPage() {
   const deleteHolding = useDeleteHolding();
   const [form, setForm] = useState(EMPTY);
   const [error, setError] = useState('');
+  const [currentPrices, setCurrentPrices] = useState<{ [key: string]: number }>({});
+  const [loadingPrices, setLoadingPrices] = useState(false);
+
+  // Fetch current prices for all holdings
+  useEffect(() => {
+    if (holdings.length === 0) return;
+    
+    const fetchPrices = async () => {
+      setLoadingPrices(true);
+      const prices: { [key: string]: number } = {};
+      
+      for (const holding of holdings) {
+        const price = await fetchStockPrice(holding.stockSymbol);
+        if (price) {
+          prices[holding.stockSymbol] = price;
+        } else {
+          prices[holding.stockSymbol] = holding.purchasePrice;
+        }
+      }
+      
+      setCurrentPrices(prices);
+      setLoadingPrices(false);
+    };
+
+    fetchPrices();
+    
+    // Refresh prices every 5 minutes
+    const interval = setInterval(fetchPrices, 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [holdings]);
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,6 +90,7 @@ export default function InvestmentsPage() {
 
       <div style={{ display: 'flex', gap: 16, marginBottom: 16, flexWrap: 'wrap' }}>
         <SummaryCard label="Total Invested" value={formatINR(totalInvested)} color="#3b82f6" />
+        {loadingPrices && <div style={{ alignSelf: 'center', fontSize: 12, color: '#64748b' }}>🔄 Fetching prices...</div>}
       </div>
 
       <div style={cardStyle}>
@@ -62,23 +115,36 @@ export default function InvestmentsPage() {
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
               <thead>
                 <tr style={{ background: '#f1f5f9' }}>
-                  {['Symbol', 'Name', 'Qty', 'Buy Price', ''].map((h) => (
+                  {['Symbol', 'Name', 'Qty', 'Buy Price', 'Current Price', 'Invested Amount', 'Current Value', 'Gain/Loss', ''].map((h) => (
                     <th key={h} style={thStyle}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {holdings.map((h) => (
-                  <tr key={h.id} style={{ borderBottom: '1px solid #e2e8f0' }}>
-                    <td style={tdStyle}><strong>{h.stockSymbol}</strong></td>
-                    <td style={tdStyle}>{h.stockName}</td>
-                    <td style={tdStyle}>{h.quantity}</td>
-                    <td style={tdStyle}>{formatINR(h.purchasePrice)}</td>
-                    <td style={tdStyle}>
-                      <button onClick={() => deleteHolding.mutate(h.id)} style={smallBtn('#ef4444')}>Delete</button>
-                    </td>
-                  </tr>
-                ))}
+                {holdings.map((h) => {
+                  const curPrice = currentPrices[h.stockSymbol] || h.purchasePrice;
+                  const investedAmount = h.quantity * h.purchasePrice;
+                  const currentValue = h.quantity * curPrice;
+                  const gain = currentValue - investedAmount;
+                  const gainPct = investedAmount > 0 ? (gain / investedAmount) * 100 : 0;
+                  return (
+                    <tr key={h.id} style={{ borderBottom: '1px solid #e2e8f0' }}>
+                      <td style={tdStyle}><strong>{h.stockSymbol}</strong></td>
+                      <td style={tdStyle}>{h.stockName}</td>
+                      <td style={tdStyle}>{h.quantity}</td>
+                      <td style={tdStyle}>{formatINR(h.purchasePrice)}</td>
+                      <td style={tdStyle}>{formatINR(curPrice)}</td>
+                      <td style={tdStyle}>{formatINR(investedAmount)}</td>
+                      <td style={tdStyle}>{formatINR(currentValue)}</td>
+                      <td style={{ ...tdStyle, color: gain >= 0 ? '#16a34a' : '#dc2626' }}>
+                        {formatINR(gain)} ({formatPct(gainPct)})
+                      </td>
+                      <td style={tdStyle}>
+                        <button onClick={() => deleteHolding.mutate(h.id)} style={smallBtn('#ef4444')}>Delete</button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
