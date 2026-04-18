@@ -1,5 +1,7 @@
-import { NavLink, Outlet } from 'react-router-dom';
+import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useRefreshPrices } from '../api/investments';
+import { useAuth } from '../context/AuthContext';
+import { signOut } from '../api/auth';
 import { currentMonth, formatMonth } from '../utils/format';
 
 const navItems = [
@@ -14,6 +16,15 @@ const navItems = [
 
 export default function Layout() {
   const refresh = useRefreshPrices();
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSignOut = async () => {
+    const { error } = await signOut();
+    if (!error) {
+      navigate('/signin');
+    }
+  };
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', fontFamily: 'system-ui, sans-serif' }}>
@@ -54,6 +65,30 @@ export default function Layout() {
             </NavLink>
           ))}
         </nav>
+
+        {/* User info and sign out */}
+        <div style={{ padding: '16px 20px', borderTop: '1px solid #334155' }}>
+          <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 8 }}>Logged in as:</div>
+          <div style={{ fontSize: 13, color: '#cbd5e1', marginBottom: 12, wordBreak: 'break-all' }}>
+            {user?.email}
+          </div>
+          <button
+            onClick={handleSignOut}
+            style={{
+              width: '100%',
+              background: '#ef4444',
+              color: '#fff',
+              border: 'none',
+              borderRadius: 6,
+              padding: '8px 12px',
+              fontSize: 13,
+              cursor: 'pointer',
+              fontWeight: 600,
+            }}
+          >
+            Sign Out
+          </button>
+        </div>
       </aside>
 
       {/* Main content */}
