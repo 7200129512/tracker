@@ -25,6 +25,7 @@ const EMPTY: Omit<ExpenseEntry, 'id'> = {
   category: 'Other',
   type: 'Variable',
   date: new Date().toISOString().slice(0, 10),
+  dueDate: undefined,
 };
 
 export default function ExpensesPage() {
@@ -58,7 +59,7 @@ export default function ExpensesPage() {
 
   const startEdit = (entry: ExpenseEntry) => {
     setEditId(entry.id);
-    setForm({ name: entry.name, amount: entry.amount, category: entry.category, type: entry.type, date: entry.date });
+    setForm({ name: entry.name, amount: entry.amount, category: entry.category, type: entry.type, date: entry.date, dueDate: entry.dueDate });
   };
 
   return (
@@ -106,6 +107,15 @@ export default function ExpensesPage() {
             onChange={(e) => setForm({ ...form, date: e.target.value })}
             required
             style={inputStyle}
+          />
+          <input
+            type="number"
+            placeholder="Due Date (day of month, e.g., 6)"
+            value={form.dueDate || ''}
+            onChange={(e) => setForm({ ...form, dueDate: e.target.value ? Number(e.target.value) : undefined })}
+            min={1}
+            max={31}
+            style={{ ...inputStyle, width: 160 }}
           />
           <button type="submit" style={btnStyle('#ef4444')}>
             {editId ? 'Update' : 'Add'}
@@ -165,7 +175,7 @@ export default function ExpensesPage() {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
             <thead>
               <tr style={{ background: '#f1f5f9' }}>
-                {['Name', 'Amount', 'Category', 'Type', 'Date', ''].map((h) => (
+                {['Name', 'Amount', 'Category', 'Type', 'Date', 'Due Date', ''].map((h) => (
                   <th key={h} style={thStyle}>{h}</th>
                 ))}
               </tr>
@@ -178,6 +188,7 @@ export default function ExpensesPage() {
                   <td style={tdStyle}>{e.category}</td>
                   <td style={tdStyle}>{e.type}</td>
                   <td style={tdStyle}>{e.date}</td>
+                  <td style={tdStyle}>{e.dueDate ? `${e.dueDate}th` : '-'}</td>
                   <td style={tdStyle}>
                     <button onClick={() => startEdit(e)} style={smallBtn('#3b82f6')}>Edit</button>
                     <button onClick={() => deleteExpense.mutate(e.id)} style={smallBtn('#ef4444')}>Delete</button>

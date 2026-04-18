@@ -37,11 +37,13 @@ export default function InvestmentsPage() {
       const updated = await Promise.all(
         holdings.map(async (holding) => {
           try {
-            const response = await fetch(`/.netlify/functions/stock-price?symbol=${holding.stockSymbol}`);
+            // Call the Netlify function with correct path
+            const response = await fetch(`https://tracker-2026-app.netlify.app/.netlify/functions/stock-price?symbol=${holding.stockSymbol}`);
             if (response.ok) {
               const data = await response.json();
               return { ...holding, currentPrice: data.price };
             } else {
+              console.warn(`Failed to fetch price for ${holding.stockSymbol}: ${response.status}`);
               return { ...holding, priceError: 'Failed to fetch price' };
             }
           } catch (err) {

@@ -15,6 +15,7 @@ const EMPTY: Omit<IncomeEntry, 'id'> = {
   amount: 0,
   frequency: 'monthly',
   effectiveDate: new Date().toISOString().slice(0, 10),
+  incomeType: 'other',
 };
 
 export default function IncomePage() {
@@ -51,12 +52,32 @@ export default function IncomePage() {
       amount: entry.amount,
       frequency: entry.frequency,
       effectiveDate: entry.effectiveDate,
+      incomeType: entry.incomeType || 'other',
     });
   };
+
+  // Calculate income breakdown
+  const baseIncome = entries.find(e => e.incomeType === 'base')?.amount || 0;
+  const variableIncome = entries.find(e => e.incomeType === 'variable')?.amount || 0;
+  const pfIncome = entries.find(e => e.incomeType === 'pf')?.amount || 0;
+  const otherIncome = entries.filter(e => e.incomeType === 'other').reduce((s, e) => s + e.amount, 0);
+  const totalMonthly = baseIncome + pfIncome + otherIncome;
 
   return (
     <div>
       <h2 style={{ marginBottom: 20, color: '#1e293b' }}>Income</h2>
+
+      {/* Income Summary Cards */}
+      <div style={{ display: 'flex', gap: 16, marginBottom: 16, flexWrap: 'wrap' }}>
+        <SummaryCard label="Base Salary" value={formatINR(baseIncome)} color="#3b82f6" />
+        <SummaryCard label="Monthly PF" value={formatINR(pfIncome)} color="#8b5cf6" />
+        <SummaryCard label="Other Monthly" value={formatINR(otherIncome)} color="#22c55e" />
+        <SummaryCard label="Total Monthly" value={formatINR(totalMonthly)} color="#1e293b" />
+        <div style={{ background: '#fff', borderRadius: 10, padding: '14px 18px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', borderLeft: '4px solid #f59e0b', minWidth: 200 }}>
+          <div style={{ fontSize: 12, color: '#64748b', marginBottom: 4 }}>Annual Variable Pay</div>
+          <div style={{ fontSize: 16, fontWeight: 700, color: '#1e293b' }}>{formatINR(variableIncome)}</div>
+        </div>
+      </div>
 
       {/* Form */}
       <div style={cardStyle}>
@@ -79,6 +100,16 @@ export default function IncomePage() {
             min={1}
             style={{ ...inputStyle, width: 140 }}
           />
+          <select
+            value={form.incomeType || 'other'}
+            onChange={(e) => setForm({ ...form, incomeType: e.target.value as any })}
+            style={inputStyle}
+          >
+            <option value="base">Base Salary</option>
+            <option value="variable">Variable Pay (Annual)</option>
+            <option value="pf">PF Contribution (Monthly)</option>
+            <option value="other">Other</option>
+          </select>
           <select
             value={form.frequency}
             onChange={(e) => setForm({ ...form, frequency: e.target.value as IncomeEntry['frequency'] })}
@@ -121,7 +152,7 @@ export default function IncomePage() {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
             <thead>
               <tr style={{ background: '#f1f5f9' }}>
-                {['Source', 'Amount', 'Frequency', 'Effective Date', ''].map((h) => (
+                {['Source', 'Type', 'Amount', 'Frequency', 'Effective Date', ''].map((h) => (
                   <th key={h} style={thStyle}>{h}</th>
                 ))}
               </tr>
@@ -130,6 +161,7 @@ export default function IncomePage() {
               {entries.map((e) => (
                 <tr key={e.id} style={{ borderBottom: '1px solid #e2e8f0' }}>
                   <td style={tdStyle}>{e.sourceName}</td>
+                  <td style={tdStyle}><span style={{ background: getTypeColor(e.incomeType), color: '#fff', padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600 }}>{e.incomeType || 'other'}</span></td>
                   <td style={tdStyle}>{formatINR(e.amount)}</td>
                   <td style={tdStyle}>{e.frequency}</td>
                   <td style={tdStyle}>{e.effectiveDate}</td>
@@ -165,6 +197,24 @@ export default function IncomePage() {
       )}
     </div>
   );
+}
+
+function SummaryCard({ label, value, color }: { label: string; value: string; color: string }) {
+  return (
+    <div style={{ background: '#fff', borderRadius: 10, padding: '14px 18px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', borderLeft: `4px solid ${color}`, minWidth: 160 }}>
+      <div style={{ fontSize: 12, color: '#64748b', marginBottom: 4 }}>{label}</div>
+      <div style={{ fontSize: 16, fontWeight: 700, color: '#1e293b' }}>{value}</div>
+    </div>
+  );
+}
+
+function getTypeColor(type?: string): string {
+  switch (type) {
+    case 'base': return '#3b82f6';
+    case 'variable': return '#f59e0b';
+    case 'pf': return '#8b5cf6';
+    default: return '#64748b';
+  }
 }
 
 const cardStyle: React.CSSProperties = {

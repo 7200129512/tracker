@@ -4,6 +4,7 @@ export interface IncomeEntry {
   amount: number;
   frequency: 'monthly' | 'one-time' | 'annual';
   effectiveDate: string;
+  incomeType?: 'base' | 'variable' | 'pf' | 'other'; // New field to categorize income
 }
 
 export interface ExpenseEntry {
@@ -13,6 +14,7 @@ export interface ExpenseEntry {
   category: 'Rent' | 'EMI' | 'Food' | 'Transport' | 'Utilities' | 'Entertainment' | 'Other';
   type: 'Fixed' | 'Variable';
   date: string;
+  dueDate?: number; // Day of month when due (e.g., 6 for 6th of each month)
 }
 
 export interface Loan {

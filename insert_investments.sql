@@ -1,0 +1,25 @@
+-- Insert investment holdings from the screenshot
+INSERT INTO investment_holdings (stock_symbol, stock_name, quantity, purchase_price, purchase_date, is_closed)
+VALUES
+('ADANIGREEN', 'Adani Green Energy', 68, 839.96, '2024-01-15', false),
+('BAJAJHFL', 'Bajaj Housing Finance', 9, 76.00, '2024-02-10', false),
+('BAJFINANCE', 'Bajaj Finance', 50, 820.56, '2024-01-20', false),
+('CUPID', 'Cupid Limited', 1295, 95.38, '2024-03-05', false),
+('HAL', 'Hindustan Aeronautics', 8, 4695.00, '2024-02-15', false),
+('HDBFS', 'HDB Financial Services', 25, 590.00, '2024-01-25', false),
+('HDFCBANK', 'HDFC Bank', 40, 744.00, '2024-02-20', false),
+('IDFCFIRSTB', 'IDFC First Bank', 12, 62.55, '2024-03-10', false),
+('INDUSINDBK', 'IndusInd Bank', 21, 783.00, '2024-01-30', false),
+('IREDA', 'Indian Renewable Energy Development Agency', 12, 116.00, '2024-02-25', false),
+('IRFC', 'Indian Railway Finance Corporation', 2, 84.75, '2024-03-15', false),
+('ITC', 'ITC Limited', 55, 295.64, '2024-01-10', false),
+('ITCHOTELS', 'ITC Hotels', 75, 145.63, '2024-02-05', false),
+('JIOFIN', 'Jio Financial Services', 25, 240.30, '2024-03-20', false),
+('KPITTECH', 'KPIT Technologies', 65, 656.60, '2024-01-05', false),
+('MUTHOOTMF', 'Muthoot Finance', 50, 148.32, '2024-02-28', false),
+('NTPC', 'NTPC Limited', 1, 398.30, '2024-03-25', false),
+('SILVERBEES', 'Silver Bees', 150, 281.64, '2024-01-12', false),
+('SOUTHBANK', 'South Indian Bank', 101, 33.85, '2024-02-18', false),
+('TATATECH', 'Tata Technologies', 25, 657.32, '2024-03-08', false),
+('TMCV', 'Tata Motors Commercial Vehicles', 80, 202.91, '2024-01-22', false),
+('TMPV', 'Tata Motors Passenger Vehicles', 200, 381.64, '2024-02-12', false);
