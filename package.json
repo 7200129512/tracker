@@ -1,12 +1,25 @@
 {
+  "name": "portfolio-tracker",
+  "version": "1.0.0",
   "private": true,
   "workspaces": [
+    "frontend",
     "backend",
-    "frontend"
+    "shared"
   ],
   "scripts": {
-    "dev:backend": "npm run dev --workspace=backend",
     "dev:frontend": "npm run dev --workspace=frontend",
-    "build": "npm run build --workspace=backend && npm run build --workspace=frontend"
+    "dev:backend": "npm run dev --workspace=backend",
+    "build": "npm run build --workspace=frontend",
+    "start": "npm run start --workspace=backend",
+    "migrate": "npm run migrate --workspace=backend"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.3"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "cors": "^2.8.5",
+    "pg": "^8.12.0"
   }
 }
