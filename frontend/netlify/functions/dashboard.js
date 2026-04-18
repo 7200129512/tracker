@@ -1,17 +1,3 @@
-const { Pool } = require('pg');
-
-let pool;
-
-function getPool() {
-  if (!pool) {
-    pool = new Pool({
-      connectionString: process.env.DATABASE_URL,
-      ssl: { rejectUnauthorized: false }
-    });
-  }
-  return pool;
-}
-
 exports.handler = async (event, context) => {
   // Enable CORS
   const headers = {
@@ -44,41 +30,62 @@ exports.handler = async (event, context) => {
       };
     }
 
-    const pool = getPool();
+    // Import pg dynamically to avoid module loading issues
+    const { Pool } = require('pg');
+    
+    const pool = new Pool({
+      connectionString: process.env.DATABASE_URL,
+      ssl: { rejectUnauthorized: false },
+      connectionTimeoutMillis: 10000,
+      idleTimeoutMillis: 30000,
+      max: 1 // Limit connections for serverless
+    });
+
     const month = event.queryStringParameters?.month || '2026-04';
     
     console.log('Connecting to database for month:', month);
+    console.log('DATABASE_URL exists:', !!process.env.DATABASE_URL);
     
-    // Test database connection first
-    await pool.query('SELECT NOW()');
-    console.log('Database connection successful');
+    // Test database connection first with timeout
+    const connectionTest = await Promise.race([
+      pool.query('SELECT NOW() as current_time'),
+      new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Database connection timeout')), 8000)
+      )
+    ]);
     
-    // Get total income for the month - simplified query
-    const incomeResult = await pool.query(`
-      SELECT COALESCE(SUM(CAST(amount AS DECIMAL)), 0) AS total
+    console.log('Database connection successful:', connectionTest.rows[0]);
+    
+    // Get total income - simplified query
+    const incomeQuery = `
+      SELECT COALESCE(SUM(amount::numeric), 0) AS total
       FROM income_entries
-      WHERE frequency = 'monthly'
-    `);
+    `;
+    const incomeResult = await pool.query(incomeQuery);
     const totalIncome = parseFloat(incomeResult.rows[0].total);
+    console.log('Income query result:', totalIncome);
 
-    // Get total expenses for the month - simplified query
-    const expenseResult = await pool.query(`
-      SELECT COALESCE(SUM(CAST(amount AS DECIMAL)), 0) AS total
+    // Get total expenses - simplified query  
+    const expenseQuery = `
+      SELECT COALESCE(SUM(amount::numeric), 0) AS total
       FROM expense_entries
-    `);
+    `;
+    const expenseResult = await pool.query(expenseQuery);
     const totalExpenses = parseFloat(expenseResult.rows[0].total);
+    console.log('Expense query result:', totalExpenses);
+
+    // Get outstanding loan principal - simplified query
+    const loanQuery = `
+      SELECT COALESCE(SUM(outstanding_principal::numeric), 0) AS total
+      FROM loans
+      WHERE is_closed = false OR is_closed IS NULL
+    `;
+    const loanResult = await pool.query(loanQuery);
+    const outstandingLoanPrincipal = parseFloat(loanResult.rows[0].total);
+    console.log('Loan query result:', outstandingLoanPrincipal);
 
     const monthlySurplus = totalIncome - totalExpenses;
     const savingsRate = totalIncome > 0 ? (monthlySurplus / totalIncome) * 100 : 0;
-
-    // Get outstanding loan principal - simplified query
-    const loanResult = await pool.query(`
-      SELECT COALESCE(SUM(CAST(outstanding_principal AS DECIMAL)), 0) AS total
-      FROM loans
-      WHERE is_closed = false OR is_closed IS NULL
-    `);
-    const outstandingLoanPrincipal = parseFloat(loanResult.rows[0].total);
-
     const netWorth = 0 - outstandingLoanPrincipal;
 
     const response = {
@@ -94,6 +101,10 @@ exports.handler = async (event, context) => {
     };
 
     console.log('Dashboard response:', response);
+    
+    // Close the connection
+    await pool.end();
+    
     return {
       statusCode: 200,
       headers,
@@ -102,26 +113,17 @@ exports.handler = async (event, context) => {
     
   } catch (error) {
     console.error('Dashboard API error:', error);
-    
-    // Return fallback data so frontend doesn't break
-    const fallbackResponse = {
-      month: event.queryStringParameters?.month || '2026-04',
-      totalIncome: 138086,
-      totalExpenses: 47552,
-      monthlySurplus: 90534,
-      savingsRate: 65.56,
-      netWorth: -1054000,
-      portfolioValue: 0,
-      savingsBalance: 0,
-      outstandingLoanPrincipal: 1054000,
-      error: 'Using fallback data',
-      details: error.message
-    };
+    console.error('Error stack:', error.stack);
     
     return {
-      statusCode: 200,
+      statusCode: 500,
       headers,
-      body: JSON.stringify(fallbackResponse)
+      body: JSON.stringify({ 
+        error: 'Internal server error', 
+        details: error.message,
+        stack: error.stack,
+        timestamp: new Date().toISOString()
+      })
     };
   }
 };
