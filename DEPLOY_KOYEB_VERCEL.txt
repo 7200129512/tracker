@@ -1,0 +1,132 @@
+🚀 PORTFOLIO TRACKER - 24/7 FREE DEPLOYMENT GUIDE
+==================================================
+✅ TRUE LIFETIME FREE HOSTING - NEVER SLEEPS!
+
+Your code: https://github.com/7200129512/tracker
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+STEP 1: DEPLOY BACKEND TO KOYEB (5 minutes)
+--------------------------------------------
+✅ Koyeb NEVER sleeps - Always responds instantly!
+
+1. Go to: https://www.koyeb.com
+2. Click "Sign up" → Choose "Continue with GitHub"
+3. Login with: sara9566@gmail.com
+4. Click "Create App"
+5. Select "GitHub" as deployment method
+6. Click "Connect GitHub" → Authorize Koyeb
+7. Select repository: 7200129512/tracker
+8. Configure:
+   ✓ Builder: Docker (auto-detected)
+   ✓ App name: portfolio-tracker
+   ✓ Service name: backend
+   ✓ Region: Singapore (or closest)
+   ✓ Instance: Free (Nano - 512MB)
+   ✓ Port: 3000
+
+9. Add Environment Variables (click "+ Add variable"):
+   
+   NODE_ENV=production
+   
+   PORT=3000
+   
+   DATABASE_URL=postgresql://postgres:@sara4251@SARA@db.zcoldagsacuaceohddal.supabase.co:5432/postgres
+   
+   FRONTEND_URL=https://your-app.vercel.app
+   (we'll update this later)
+   
+   MARKET_DATA_REFRESH_CRON=*/15 9-15 * * 1-5
+
+10. Click "Deploy"
+11. Wait 3-5 minutes for deployment
+12. ⭐ COPY YOUR BACKEND URL ⭐
+    (looks like: https://portfolio-tracker-backend-your-org.koyeb.app)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+STEP 2: DEPLOY FRONTEND TO VERCEL (3 minutes)
+----------------------------------------------
+1. Go to: https://vercel.com
+2. Click "Sign Up" → Choose "Continue with GitHub"
+3. Login with: sara9566@gmail.com
+4. Click "Add New..." → "Project"
+5. Click "Import" next to: 7200129512/tracker
+6. Configure:
+   ✓ Framework: Vite
+   ✓ Root Directory: ./
+   ✓ Build Command: npm run build --workspace=frontend
+   ✓ Output Directory: frontend/dist
+   ✓ Install Command: npm install
+
+7. Add Environment Variable:
+   Click "Environment Variables" →
+   
+   Name: VITE_API_BASE_URL
+   Value: <PASTE YOUR KOYEB BACKEND URL FROM STEP 1>
+   
+   Example: https://portfolio-tracker-backend-your-org.koyeb.app
+
+8. Click "Deploy"
+9. Wait 1-2 minutes
+10. ⭐ COPY YOUR FRONTEND URL ⭐
+    (looks like: https://tracker-xyz.vercel.app)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+STEP 3: UPDATE BACKEND URL (1 minute)
+--------------------------------------
+1. Go back to Koyeb: https://app.koyeb.com
+2. Click your "portfolio-tracker" app
+3. Click "Settings" tab
+4. Scroll to "Environment variables"
+5. Click "Edit" on FRONTEND_URL
+6. Replace with your Vercel URL from Step 2
+7. Click "Update" (auto-redeploys)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+STEP 4: RUN DATABASE MIGRATIONS (1 minute)
+-------------------------------------------
+Easy way - Run from your computer:
+
+1. Open terminal in your project folder
+2. Run: npm run migrate --workspace=backend
+3. Wait for "Migrations completed successfully"
+
+(Your database is on Supabase, so you can run migrations locally!)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✅ DONE! YOUR APP IS LIVE 24/7!
+================================
+
+Open your Vercel URL in browser: https://tracker-xyz.vercel.app
+
+🎉 BENEFITS:
+✅ 24/7 availability - NEVER sleeps!
+✅ Always responds instantly
+✅ Lifetime FREE hosting
+✅ Auto-deploy on git push
+✅ Professional URLs
+✅ SSL certificates included
+
+📊 FREE TIER LIMITS:
+• Koyeb: 512MB RAM, shared CPU (perfect for your app!)
+• Vercel: Unlimited bandwidth for personal use
+• Supabase: 500MB database, 2GB bandwidth/month
+
+🔧 TROUBLESHOOTING:
+• Backend not starting? Check environment variables in Koyeb
+• Frontend can't connect? Verify VITE_API_BASE_URL in Vercel
+• Database errors? Check DATABASE_URL in Koyeb
+• View logs: Koyeb dashboard → Your app → Logs tab
+
+🌐 YOUR URLS:
+Frontend: https://tracker-[your-id].vercel.app
+Backend: https://portfolio-tracker-backend-[your-org].koyeb.app
+Database: Supabase (already configured)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Need help? Check DEPLOYMENT.md for detailed instructions!
