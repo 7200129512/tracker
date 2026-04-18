@@ -56,11 +56,18 @@ export default function IncomePage() {
     });
   };
 
-  // Calculate income breakdown
-  const baseIncome = entries.find(e => e.incomeType === 'base')?.amount || 0;
-  const variableIncome = entries.find(e => e.incomeType === 'variable')?.amount || 0;
-  const pfIncome = entries.find(e => e.incomeType === 'pf')?.amount || 0;
-  const otherIncome = entries.filter(e => e.incomeType === 'other').reduce((s, e) => s + e.amount, 0);
+  // Calculate income breakdown based on source name
+  const getIncomeType = (sourceName: string): string => {
+    if (sourceName.toLowerCase().includes('salary')) return 'base';
+    if (sourceName.toLowerCase().includes('variable')) return 'variable';
+    if (sourceName.toLowerCase().includes('pf')) return 'pf';
+    return 'other';
+  };
+
+  const baseIncome = entries.find(e => getIncomeType(e.sourceName) === 'base')?.amount || 0;
+  const variableIncome = entries.find(e => getIncomeType(e.sourceName) === 'variable')?.amount || 0;
+  const pfIncome = entries.find(e => getIncomeType(e.sourceName) === 'pf')?.amount || 0;
+  const otherIncome = entries.filter(e => !['base', 'variable', 'pf'].includes(getIncomeType(e.sourceName))).reduce((s, e) => s + e.amount, 0);
   const totalMonthly = baseIncome + pfIncome + otherIncome;
 
   return (
@@ -100,16 +107,6 @@ export default function IncomePage() {
             min={1}
             style={{ ...inputStyle, width: 140 }}
           />
-          <select
-            value={form.incomeType || 'other'}
-            onChange={(e) => setForm({ ...form, incomeType: e.target.value as any })}
-            style={inputStyle}
-          >
-            <option value="base">Base Salary</option>
-            <option value="variable">Variable Pay (Annual)</option>
-            <option value="pf">PF Contribution (Monthly)</option>
-            <option value="other">Other</option>
-          </select>
           <select
             value={form.frequency}
             onChange={(e) => setForm({ ...form, frequency: e.target.value as IncomeEntry['frequency'] })}
@@ -158,24 +155,27 @@ export default function IncomePage() {
               </tr>
             </thead>
             <tbody>
-              {entries.map((e) => (
-                <tr key={e.id} style={{ borderBottom: '1px solid #e2e8f0' }}>
-                  <td style={tdStyle}>{e.sourceName}</td>
-                  <td style={tdStyle}><span style={{ background: getTypeColor(e.incomeType), color: '#fff', padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600 }}>{e.incomeType || 'other'}</span></td>
-                  <td style={tdStyle}>{formatINR(e.amount)}</td>
-                  <td style={tdStyle}>{e.frequency}</td>
-                  <td style={tdStyle}>{e.effectiveDate}</td>
-                  <td style={tdStyle}>
-                    <button onClick={() => startEdit(e)} style={smallBtn('#3b82f6')}>Edit</button>
-                    <button
-                      onClick={() => deleteIncome.mutate(e.id)}
-                      style={smallBtn('#ef4444')}
-                    >
-                      Delete
-                    </button>
-                  </td>
-                </tr>
-              ))}
+              {entries.map((e) => {
+                const type = getIncomeType(e.sourceName);
+                return (
+                  <tr key={e.id} style={{ borderBottom: '1px solid #e2e8f0' }}>
+                    <td style={tdStyle}>{e.sourceName}</td>
+                    <td style={tdStyle}><span style={{ background: getTypeColor(type), color: '#fff', padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600 }}>{type}</span></td>
+                    <td style={tdStyle}>{formatINR(e.amount)}</td>
+                    <td style={tdStyle}>{e.frequency}</td>
+                    <td style={tdStyle}>{e.effectiveDate}</td>
+                    <td style={tdStyle}>
+                      <button onClick={() => startEdit(e)} style={smallBtn('#3b82f6')}>Edit</button>
+                      <button
+                        onClick={() => deleteIncome.mutate(e.id)}
+                        style={smallBtn('#ef4444')}
+                      >
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         )}
@@ -208,7 +208,7 @@ function SummaryCard({ label, value, color }: { label: string; value: string; co
   );
 }
 
-function getTypeColor(type?: string): string {
+function getTypeColor(type: string): string {
   switch (type) {
     case 'base': return '#3b82f6';
     case 'variable': return '#f59e0b';
