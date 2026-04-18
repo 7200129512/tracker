@@ -4,11 +4,6 @@
   "outputDirectory": "frontend/dist",
   "installCommand": "npm install",
   "framework": "vite",
-  "functions": {
-    "api/dashboard.js": {
-      "runtime": "nodejs18.x"
-    }
-  },
   "rewrites": [
     {
       "source": "/api/v1/dashboard/summary",
