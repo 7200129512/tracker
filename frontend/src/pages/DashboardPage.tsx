@@ -42,6 +42,7 @@ export default function DashboardPage() {
       {/* Summary cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
         <Card label="Monthly Income" value={formatINR(summary?.totalIncome ?? 0)} color="#22c55e" />
+        <Card label="Monthly PF" value={formatINR(summary?.pfAmount ?? 0)} color="#8b5cf6" />
         <Card label="Monthly Expenses" value={formatINR(summary?.totalExpenses ?? 0)} color="#ef4444" />
         <Card
           label="Monthly Surplus"
@@ -49,18 +50,13 @@ export default function DashboardPage() {
           color={surplus < 0 ? '#ef4444' : '#3b82f6'}
           highlight={surplus < 0}
         />
-        <Card label="Net Worth" value={formatINR(summary?.netWorth ?? 0)} color="#8b5cf6" />
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
         <Card label="Savings Balance" value={formatINR(summary?.savingsBalance ?? 0)} color="#0ea5e9" />
         <Card label="Savings Rate" value={formatPct(summary?.savingsRate ?? 0)} color="#14b8a6" />
-        <Card label="Portfolio Value" value={formatINR(summary?.portfolioCurrentValue ?? 0)} color="#f59e0b" />
-        <Card
-          label="Portfolio Gain/Loss"
-          value={`${formatINR(summary?.portfolioGainLoss ?? 0)} (${formatPct(summary?.portfolioGainLossPct ?? 0)})`}
-          color={(summary?.portfolioGainLoss ?? 0) >= 0 ? '#22c55e' : '#ef4444'}
-        />
+        <Card label="Net Worth" value={formatINR(summary?.netWorth ?? 0)} color="#1e293b" />
+        <Card label="Outstanding Loan" value={formatINR(summary?.outstandingLoanPrincipal ?? 0)} color="#ef4444" />
       </div>
 
       {/* Loan progress */}

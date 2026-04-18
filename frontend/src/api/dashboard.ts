@@ -8,8 +8,24 @@ export const useDashboardSummary = (month: string) =>
     queryFn: async () => {
       try {
         // Fetch income entries
-        const incomeRes = await supabaseClient.get('/income_entries?select=amount');
-        const totalIncome = incomeRes.data.reduce((sum: number, row: any) => sum + parseFloat(row.amount || 0), 0);
+        const incomeRes = await supabaseClient.get('/income_entries?select=source_name,amount,frequency');
+        
+        // Calculate income: exclude PF from monthly income
+        let totalIncome = 0;
+        let pfAmount = 0;
+        
+        incomeRes.data.forEach((row: any) => {
+          const amount = parseFloat(row.amount || 0);
+          const sourceName = row.source_name?.toLowerCase() || '';
+          
+          if (sourceName.includes('pf')) {
+            // PF is tracked separately, not added to monthly income
+            pfAmount = amount;
+          } else {
+            // Include base salary and other income
+            totalIncome += amount;
+          }
+        });
 
         // Fetch expense entries
         const expenseRes = await supabaseClient.get('/expense_entries?select=amount');
@@ -46,6 +62,7 @@ export const useDashboardSummary = (month: string) =>
           portfolioGainLossPct: 0,
           savingsBalance: parseFloat(savingsBalance.toFixed(2)),
           outstandingLoanPrincipal: parseFloat(outstandingLoanPrincipal.toFixed(2)),
+          pfAmount: parseFloat(pfAmount.toFixed(2)),
         };
       } catch (error) {
         console.error('Dashboard error:', error);
@@ -60,12 +77,14 @@ export const useCashFlow = () =>
     queryKey: ['dashboard', 'cashflow'],
     queryFn: async () => {
       try {
-        const incomeRes = await supabaseClient.get('/income_entries?select=effective_date,amount');
+        const incomeRes = await supabaseClient.get('/income_entries?select=effective_date,amount,source_name');
         const expenseRes = await supabaseClient.get('/expense_entries?select=date,amount');
         
-        // Combine and group by month
+        // Combine and group by month, excluding PF from income
         const allData = [
-          ...incomeRes.data.map((row: any) => ({ date: row.effective_date, amount: parseFloat(row.amount || 0), type: 'income' })),
+          ...incomeRes.data
+            .filter((row: any) => !row.source_name?.toLowerCase().includes('pf'))
+            .map((row: any) => ({ date: row.effective_date, amount: parseFloat(row.amount || 0), type: 'income' })),
           ...expenseRes.data.map((row: any) => ({ date: row.date, amount: parseFloat(row.amount || 0), type: 'expense' }))
         ];
 

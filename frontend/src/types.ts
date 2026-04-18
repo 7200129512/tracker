@@ -96,6 +96,7 @@ export interface DashboardSummary {
   portfolioGainLoss: number;
   portfolioGainLossPct: number;
   savingsBalance: number;
+  pfAmount?: number;
 }
 
 export interface CashFlowPoint {
