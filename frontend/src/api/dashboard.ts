@@ -10,9 +10,10 @@ export const useDashboardSummary = (month: string) =>
         // Fetch income entries
         const incomeRes = await supabaseClient.get('/income_entries?select=source_name,amount,frequency');
         
-        // Calculate income: exclude PF from monthly income
+        // Calculate income: exclude PF and Variable Pay from monthly income
         let totalIncome = 0;
         let pfAmount = 0;
+        let variablePayAmount = 0;
         
         incomeRes.data.forEach((row: any) => {
           const amount = parseFloat(row.amount || 0);
@@ -21,8 +22,11 @@ export const useDashboardSummary = (month: string) =>
           if (sourceName.includes('pf')) {
             // PF is tracked separately, not added to monthly income
             pfAmount = amount;
+          } else if (sourceName.includes('variable')) {
+            // Variable pay is tracked separately, not added to monthly income
+            variablePayAmount = amount;
           } else {
-            // Include base salary and other income
+            // Include only base salary and other income
             totalIncome += amount;
           }
         });
@@ -63,6 +67,7 @@ export const useDashboardSummary = (month: string) =>
           savingsBalance: parseFloat(savingsBalance.toFixed(2)),
           outstandingLoanPrincipal: parseFloat(outstandingLoanPrincipal.toFixed(2)),
           pfAmount: parseFloat(pfAmount.toFixed(2)),
+          variablePayAmount: parseFloat(variablePayAmount.toFixed(2)),
         };
       } catch (error) {
         console.error('Dashboard error:', error);
@@ -80,10 +85,13 @@ export const useCashFlow = () =>
         const incomeRes = await supabaseClient.get('/income_entries?select=effective_date,amount,source_name');
         const expenseRes = await supabaseClient.get('/expense_entries?select=date,amount');
         
-        // Combine and group by month, excluding PF from income
+        // Combine and group by month, excluding PF and Variable Pay from income
         const allData = [
           ...incomeRes.data
-            .filter((row: any) => !row.source_name?.toLowerCase().includes('pf'))
+            .filter((row: any) => {
+              const sourceName = row.source_name?.toLowerCase() || '';
+              return !sourceName.includes('pf') && !sourceName.includes('variable');
+            })
             .map((row: any) => ({ date: row.effective_date, amount: parseFloat(row.amount || 0), type: 'income' })),
           ...expenseRes.data.map((row: any) => ({ date: row.date, amount: parseFloat(row.amount || 0), type: 'expense' }))
         ];

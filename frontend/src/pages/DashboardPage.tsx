@@ -43,20 +43,20 @@ export default function DashboardPage() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
         <Card label="Monthly Income" value={formatINR(summary?.totalIncome ?? 0)} color="#22c55e" />
         <Card label="Monthly PF" value={formatINR(summary?.pfAmount ?? 0)} color="#8b5cf6" />
+        <Card label="Annual Variable Pay" value={formatINR(summary?.variablePayAmount ?? 0)} color="#f59e0b" />
         <Card label="Monthly Expenses" value={formatINR(summary?.totalExpenses ?? 0)} color="#ef4444" />
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
         <Card
           label="Monthly Surplus"
           value={formatINR(surplus)}
           color={surplus < 0 ? '#ef4444' : '#3b82f6'}
           highlight={surplus < 0}
         />
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
         <Card label="Savings Balance" value={formatINR(summary?.savingsBalance ?? 0)} color="#0ea5e9" />
         <Card label="Savings Rate" value={formatPct(summary?.savingsRate ?? 0)} color="#14b8a6" />
         <Card label="Net Worth" value={formatINR(summary?.netWorth ?? 0)} color="#1e293b" />
-        <Card label="Outstanding Loan" value={formatINR(summary?.outstandingLoanPrincipal ?? 0)} color="#ef4444" />
       </div>
 
       {/* Loan progress */}

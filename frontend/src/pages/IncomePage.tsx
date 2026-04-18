@@ -68,7 +68,7 @@ export default function IncomePage() {
   const variableIncome = entries.find(e => getIncomeType(e.sourceName) === 'variable')?.amount || 0;
   const pfIncome = entries.find(e => getIncomeType(e.sourceName) === 'pf')?.amount || 0;
   const otherIncome = entries.filter(e => !['base', 'variable', 'pf'].includes(getIncomeType(e.sourceName))).reduce((s, e) => s + e.amount, 0);
-  const totalMonthly = baseIncome + otherIncome; // PF is NOT added to monthly income
+  const totalMonthly = baseIncome + otherIncome; // PF and Variable Pay are NOT added to monthly income
 
   return (
     <div>
