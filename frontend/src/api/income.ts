@@ -53,9 +53,17 @@ export const useAddIncome = () => {
   return useMutation({
     mutationFn: (data: Omit<IncomeEntry, 'id'>) => {
       if (!user?.id) throw new Error('User not authenticated');
+      console.log('Adding income with user_id:', user.id);
+      console.log('Data:', { ...data, user_id: user.id });
       return supabaseClient.post('/income_entries', { ...data, user_id: user.id });
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['income'] }),
+    onSuccess: () => {
+      console.log('Income added successfully');
+      qc.invalidateQueries({ queryKey: ['income'] });
+    },
+    onError: (error) => {
+      console.error('Error adding income:', error);
+    },
   });
 };
 

@@ -1,0 +1,52 @@
+URGENT: Apply Database Migration to Fix 400 Error
+
+The app is showing 400 errors because the database doesn't have user_id columns yet.
+
+STEPS TO FIX (Takes 2 minutes):
+
+1. Go to: https://supabase.com/dashboard
+2. Log in with: sara9566@gmail.com
+3. Click on "Tracker" project
+4. Click "SQL Editor" on the left sidebar
+5. Click "New Query" button
+6. Copy and paste ALL of this SQL:
+
+---START COPY HERE---
+
+-- Add user_id column to income_entries
+ALTER TABLE income_entries ADD COLUMN user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE;
+
+-- Add user_id column to expense_entries
+ALTER TABLE expense_entries ADD COLUMN user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE;
+
+-- Add user_id column to loans
+ALTER TABLE loans ADD COLUMN user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE;
+
+-- Add user_id column to investment_holdings
+ALTER TABLE investment_holdings ADD COLUMN user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE;
+
+-- Add user_id column to savings_transactions
+ALTER TABLE savings_transactions ADD COLUMN user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE;
+
+-- Add user_id column to monthly_notes
+ALTER TABLE monthly_notes ADD COLUMN user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE;
+
+-- Create indexes for faster queries
+CREATE INDEX idx_income_entries_user_id ON income_entries(user_id);
+CREATE INDEX idx_expense_entries_user_id ON expense_entries(user_id);
+CREATE INDEX idx_loans_user_id ON loans(user_id);
+CREATE INDEX idx_investment_holdings_user_id ON investment_holdings(user_id);
+CREATE INDEX idx_savings_transactions_user_id ON savings_transactions(user_id);
+CREATE INDEX idx_monthly_notes_user_id ON monthly_notes(user_id);
+
+---END COPY HERE---
+
+7. Click the "Run" button (blue button on the right)
+8. Wait for "Query executed successfully" message
+9. Refresh your app at: https://tracker-2026-app.netlify.app
+10. Try adding income again - it should work now!
+
+If you get an error like "column already exists", that means it's already applied - just refresh the app.
+
+AFTER MIGRATION:
+You'll need to associate your existing data with your user account. I'll help with that next.
