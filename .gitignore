@@ -9,3 +9,7 @@ frontend/.env
 frontend/dist/
 backend/dist/
 .vscode/
+render-backend/
+standalone-backend/
+railway-backend/
+railway-simple/
