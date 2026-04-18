@@ -17,7 +17,7 @@ export const useDashboardSummary = (month: string) =>
         
         incomeRes.data.forEach((row: any) => {
           const amount = parseFloat(row.amount || 0);
-          const sourceName = row.source_name?.toLowerCase() || '';
+          const sourceName = (row.source_name || '').toLowerCase();
           
           if (sourceName.includes('pf')) {
             // Sum all PF entries (both one-time and monthly)
@@ -89,7 +89,7 @@ export const useCashFlow = () =>
         const allData = [
           ...incomeRes.data
             .filter((row: any) => {
-              const sourceName = row.source_name?.toLowerCase() || '';
+              const sourceName = (row.source_name || '').toLowerCase();
               return !sourceName.includes('pf') && !sourceName.includes('variable');
             })
             .map((row: any) => ({ date: row.effective_date, amount: parseFloat(row.amount || 0), type: 'income' })),
