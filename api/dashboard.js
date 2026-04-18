@@ -4,9 +4,14 @@ let pool;
 
 function getPool() {
   if (!pool) {
+    const connectionString = process.env.DATABASE_URL;
+    if (!connectionString) {
+      throw new Error('DATABASE_URL environment variable is not set');
+    }
+    
     pool = new Pool({
-      connectionString: process.env.DATABASE_URL,
-      ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+      connectionString,
+      ssl: { rejectUnauthorized: false }
     });
   }
   return pool;
@@ -24,8 +29,23 @@ module.exports = async (req, res) => {
   }
 
   try {
+    // Check if DATABASE_URL is available
+    if (!process.env.DATABASE_URL) {
+      console.error('DATABASE_URL environment variable is missing');
+      return res.status(500).json({ 
+        error: 'Database configuration error',
+        details: 'DATABASE_URL environment variable is not set'
+      });
+    }
+
     const pool = getPool();
     const month = req.query.month || '2026-04';
+    
+    console.log('Connecting to database for month:', month);
+    
+    // Test database connection first
+    await pool.query('SELECT NOW()');
+    console.log('Database connection successful');
     
     // Get total income for the month
     const incomeResult = await pool.query(`
@@ -57,7 +77,7 @@ module.exports = async (req, res) => {
 
     const netWorth = 0 - outstandingLoanPrincipal; // Simplified calculation
 
-    res.json({
+    const response = {
       month,
       totalIncome: parseFloat(totalIncome.toFixed(2)),
       totalExpenses: parseFloat(totalExpenses.toFixed(2)),
@@ -67,12 +87,17 @@ module.exports = async (req, res) => {
       portfolioValue: 0,
       savingsBalance: 0,
       outstandingLoanPrincipal: parseFloat(outstandingLoanPrincipal.toFixed(2)),
-    });
+    };
+
+    console.log('Dashboard response:', response);
+    res.json(response);
+    
   } catch (error) {
     console.error('Dashboard API error:', error);
     res.status(500).json({ 
       error: 'Internal server error', 
       details: error.message,
+      stack: error.stack,
       // Return some default data so frontend doesn't break
       month: req.query.month || '2026-04',
       totalIncome: 138086,
