@@ -1,46 +1,63 @@
 {
   "version": 2,
-  "builds": [
-    {
-      "src": "frontend/package.json",
-      "use": "@vercel/static-build",
-      "config": {
-        "distDir": "dist"
-      }
+  "buildCommand": "npm run build --workspace=frontend",
+  "outputDirectory": "frontend/dist",
+  "installCommand": "npm install",
+  "functions": {
+    "api/dashboard.js": {
+      "runtime": "nodejs18.x"
     },
-    {
-      "src": "api/*.js",
-      "use": "@vercel/node"
+    "api/test.js": {
+      "runtime": "nodejs18.x"
+    },
+    "api/income.js": {
+      "runtime": "nodejs18.x"
+    },
+    "api/expenses.js": {
+      "runtime": "nodejs18.x"
+    },
+    "api/loans.js": {
+      "runtime": "nodejs18.x"
+    },
+    "api/investments.js": {
+      "runtime": "nodejs18.x"
+    },
+    "api/savings.js": {
+      "runtime": "nodejs18.x"
     }
-  ],
-  "routes": [
+  },
+  "rewrites": [
     {
-      "src": "/api/v1/dashboard/summary",
-      "dest": "/api/dashboard"
+      "source": "/api/v1/dashboard/summary",
+      "destination": "/api/dashboard"
     },
     {
-      "src": "/api/v1/income",
-      "dest": "/api/income"
+      "source": "/api/v1/test",
+      "destination": "/api/test"
     },
     {
-      "src": "/api/v1/expenses",
-      "dest": "/api/expenses"
+      "source": "/api/v1/income",
+      "destination": "/api/income"
     },
     {
-      "src": "/api/v1/loans",
-      "dest": "/api/loans"
+      "source": "/api/v1/expenses",
+      "destination": "/api/expenses"
     },
     {
-      "src": "/api/v1/investments",
-      "dest": "/api/investments"
+      "source": "/api/v1/loans",
+      "destination": "/api/loans"
     },
     {
-      "src": "/api/v1/savings",
-      "dest": "/api/savings"
+      "source": "/api/v1/investments",
+      "destination": "/api/investments"
     },
     {
-      "src": "/(.*)",
-      "dest": "/frontend/$1"
+      "source": "/api/v1/savings",
+      "destination": "/api/savings"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
   ]
 }
