@@ -3,29 +3,6 @@
   "buildCommand": "npm run build --workspace=frontend",
   "outputDirectory": "frontend/dist",
   "installCommand": "npm install",
-  "functions": {
-    "api/dashboard.js": {
-      "runtime": "nodejs18.x"
-    },
-    "api/test.js": {
-      "runtime": "nodejs18.x"
-    },
-    "api/income.js": {
-      "runtime": "nodejs18.x"
-    },
-    "api/expenses.js": {
-      "runtime": "nodejs18.x"
-    },
-    "api/loans.js": {
-      "runtime": "nodejs18.x"
-    },
-    "api/investments.js": {
-      "runtime": "nodejs18.x"
-    },
-    "api/savings.js": {
-      "runtime": "nodejs18.x"
-    }
-  },
   "rewrites": [
     {
       "source": "/api/v1/dashboard/summary",
