@@ -8,6 +8,9 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   background: #f8fafc;
   color: #1e293b;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-touch-callout: none;
 }
 
 button:hover {
@@ -16,9 +19,36 @@ button:hover {
 
 input, select {
   outline: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
 }
 
 input:focus, select:focus {
   border-color: #3b82f6 !important;
   box-shadow: 0 0 0 2px rgba(59,130,246,0.15);
+}
+
+/* Mobile optimizations */
+@media (max-width: 768px) {
+  body {
+    font-size: 16px; /* Prevents zoom on iOS */
+  }
+  
+  input, select, textarea {
+    font-size: 16px;
+  }
+  
+  button {
+    min-height: 44px; /* Touch-friendly button size */
+    min-width: 44px;
+  }
+}
+
+/* Safe area for notched devices */
+@supports (padding: max(0px)) {
+  body {
+    padding-left: max(0px, env(safe-area-inset-left));
+    padding-right: max(0px, env(safe-area-inset-right));
+  }
 }
