@@ -43,19 +43,19 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Row 1 — Daily bank tracking + Income */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16, marginBottom: 16 }}>
+      {/* Row 1 — Daily bank tracking + Income + Monthly Spend & Receive */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 16 }}>
         <Card label="Daily Spend & Receive" value={`${formatINR(dailyExp?.todayTotal ?? 0)} / ${formatINR(dailyExp?.todayCredit ?? 0)}`} color="#f97316" />
         <IncomeCard 
           salary={formatINR(summary?.totalIncome ?? 0)}
           pf={formatINR(summary?.pfAmount ?? 0)}
           variablePay={formatINR(summary?.variablePayAmount ?? 0)}
         />
+        <Card label="Monthly Spend & Receive" value={`${formatINR(dailyExp?.monthTotal ?? 0)} / ${formatINR(dailyExp?.monthCredit ?? 0)}`} color="#dc2626" />
       </div>
 
-      {/* Row 2 — Monthly totals, Surplus/Expenses, and Investments */}
+      {/* Row 2 — Monthly Surplus/Expenses, Investments, and Loan Breakdown */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 16 }}>
-        <Card label="Monthly Spend & Receive" value={`${formatINR(dailyExp?.monthTotal ?? 0)} / ${formatINR(dailyExp?.monthCredit ?? 0)}`} color="#dc2626" />
         <IncomeCard 
           salary={formatINR(surplus)}
           pf={formatINR(summary?.totalExpenses ?? 0)}
@@ -75,6 +75,25 @@ export default function DashboardPage() {
             />
           );
         })()}
+        <div style={{ background: '#fff', borderRadius: 10, padding: '16px 20px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', borderLeft: '4px solid #f97316' }}>
+          <div style={{ fontSize: 12, color: '#64748b', marginBottom: 6 }}>Loan Breakdown</div>
+          {activeLoans.length > 0 ? (
+            <div>
+              {activeLoans.slice(0, 1).map((loan) => {
+                const remainingMonths = loan.emiAmount > 0 ? Math.ceil(loan.outstandingPrincipal / loan.emiAmount) : 0;
+                return (
+                  <div key={loan.id}>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: '#1e293b', marginBottom: 2 }}>{loan.loanName}</div>
+                    <div style={{ fontSize: 12, color: '#64748b' }}>{formatINR(loan.outstandingPrincipal)}</div>
+                    <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>EMI: {formatINR(loan.emiAmount)} · ~{remainingMonths}m</div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div style={{ fontSize: 12, color: '#94a3b8' }}>No active loans</div>
+          )}
+        </div>
       </div>
 
       {/* Loan breakdown — one card per active loan */}
