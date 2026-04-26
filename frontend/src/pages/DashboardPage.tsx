@@ -173,7 +173,7 @@ function Card({ label, value, color, highlight }: { label: string; value: string
       boxShadow: '0 1px 4px rgba(0,0,0,0.08)', borderLeft: `4px solid ${color}`,
     }}>
       <div style={{ fontSize: 12, color: '#64748b', marginBottom: 6 }}>{label}</div>
-      <div style={{ fontSize: 20, fontWeight: 700, color: highlight ? '#ef4444' : '#1e293b' }}>{value}</div>
+      <div style={{ fontSize: 18, fontWeight: 700, color: highlight ? '#ef4444' : '#1e293b' }}>{value}</div>
     </div>
   );
 }
@@ -187,7 +187,7 @@ function IncomeCard({ salary, pf, variablePay, labels }: { salary: string; pf: s
       boxShadow: '0 1px 4px rgba(0,0,0,0.08)', borderLeft: '4px solid #22c55e',
     }}>
       <div style={{ fontSize: 12, color: '#64748b', marginBottom: 6 }}>{defaultLabels}</div>
-      <div style={{ fontSize: 20, fontWeight: 700, color: '#1e293b' }}>{displayValues}</div>
+      <div style={{ fontSize: 18, fontWeight: 700, color: '#1e293b' }}>{displayValues}</div>
     </div>
   );
 }
@@ -199,7 +199,7 @@ function InvestmentCard({ invested, current, gainLoss }: { invested: string; cur
       boxShadow: '0 1px 4px rgba(0,0,0,0.08)', borderLeft: '4px solid #3b82f6',
     }}>
       <div style={{ fontSize: 12, color: '#64748b', marginBottom: 6 }}>Total Invested / Current Value / Total Gain/Loss</div>
-      <div style={{ fontSize: 16, fontWeight: 700, color: '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{invested} / {current} / {gainLoss}</div>
+      <div style={{ fontSize: 18, fontWeight: 700, color: '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{invested} / {current} / {gainLoss}</div>
     </div>
   );
 }
