@@ -1,29 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabaseClient } from '../api/client';
 
 export default function SettingsPage() {
   const { user } = useAuth();
-  const [monthlyPF, setMonthlyPF] = useState<number>(0);
+  const [monthlyPF, setMonthlyPF] = useState<number>(7002);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
-
-  // Load current monthly PF setting
-  useEffect(() => {
-    const loadSettings = async () => {
-      if (!user?.id) return;
-      try {
-        const res = await supabaseClient.get(`/income_entries?user_id=eq.${user.id}&source_name=ilike.%Monthly%PF%&frequency=eq.monthly&order=id.desc&limit=1`);
-        if (res.data.length > 0) {
-          setMonthlyPF(res.data[0].amount);
-        }
-      } catch (err) {
-        console.error('Error loading settings:', err);
-      }
-    };
-    loadSettings();
-  }, [user?.id]);
 
   const handleSetMonthlyPF = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,14 +28,6 @@ export default function SettingsPage() {
     try {
       console.log('Setting monthly PF for user:', user.id);
       
-      // Delete existing monthly PF entries
-      console.log('Deleting existing PF entries...');
-      try {
-        await supabaseClient.delete(`/income_entries?user_id=eq.${user.id}&source_name=ilike.%Monthly%PF%&frequency=eq.monthly`);
-      } catch (err) {
-        console.log('No existing PF entries to delete or error:', err);
-      }
-
       // Create PF entries for the next 12 months starting from next month
       const today = new Date();
       const entries = [];
@@ -71,16 +47,26 @@ export default function SettingsPage() {
       
       // Insert all entries
       let successCount = 0;
+      let errorCount = 0;
+      
       for (const entry of entries) {
         try {
+          console.log('Creating entry for:', entry.effective_date);
           await supabaseClient.post('/income_entries', entry);
           successCount++;
         } catch (err) {
           console.error('Error creating entry:', err);
+          errorCount++;
         }
       }
 
-      setMessage(`✅ Monthly PF set to ₹${monthlyPF}. Created ${successCount} automatic entries starting next month.`);
+      if (successCount > 0) {
+        setMessage(`✅ Monthly PF set to ₹${monthlyPF}. Created ${successCount} automatic entries starting next month.`);
+      }
+      
+      if (errorCount > 0) {
+        setError(`⚠️ Created ${successCount} entries but ${errorCount} failed. Check console for details.`);
+      }
     } catch (err) {
       console.error('Error:', err);
       setError(err instanceof Error ? err.message : 'Error setting monthly PF');
