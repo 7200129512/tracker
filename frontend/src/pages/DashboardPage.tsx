@@ -24,8 +24,12 @@ export default function DashboardPage() {
   const surplus = summary?.monthlySurplus ?? 0;
 
   return (
-    <div>
-      <h2 style={{ marginBottom: 20, color: '#1e293b' }}>Dashboard — {formatMonth(month)}</h2>
+    <div style={{ maxWidth: 1400, margin: '0 auto', padding: window.innerWidth < 768 ? 0 : '0 20px' }}>
+      <h2 style={{ 
+        marginBottom: 20, 
+        color: '#1e293b',
+        fontSize: window.innerWidth < 768 ? 24 : 28
+      }}>Dashboard — {formatMonth(month)}</h2>
 
       {/* Alerts — budget and low surplus only */}
       {alerts && (
@@ -46,7 +50,7 @@ export default function DashboardPage() {
       {/* Row 1 — Daily bank tracking + Income + Monthly Spend & Receive */}
       <div style={{ 
         display: 'grid', 
-        gridTemplateColumns: window.innerWidth < 768 ? '1fr' : 'repeat(3, 1fr)', 
+        gridTemplateColumns: window.innerWidth < 768 ? '1fr' : window.innerWidth < 1200 ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', 
         gap: window.innerWidth < 768 ? 12 : 16, 
         marginBottom: 16 
       }}>
@@ -62,7 +66,7 @@ export default function DashboardPage() {
       {/* Row 2 — Monthly Surplus/Expenses, Investments, and Loan Breakdown */}
       <div style={{ 
         display: 'grid', 
-        gridTemplateColumns: window.innerWidth < 768 ? '1fr' : 'repeat(3, 1fr)', 
+        gridTemplateColumns: window.innerWidth < 768 ? '1fr' : window.innerWidth < 1200 ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', 
         gap: window.innerWidth < 768 ? 12 : 16, 
         marginBottom: 16 
       }}>
@@ -88,7 +92,7 @@ export default function DashboardPage() {
         <div style={{ 
           background: '#fff', 
           borderRadius: 10, 
-          padding: window.innerWidth < 768 ? '12px 16px' : '16px 20px', 
+          padding: window.innerWidth < 768 ? '12px 16px' : window.innerWidth < 1024 ? '14px 18px' : '16px 20px', 
           boxShadow: '0 1px 4px rgba(0,0,0,0.08)', 
           borderLeft: '4px solid #f97316' 
         }}>
@@ -97,11 +101,26 @@ export default function DashboardPage() {
             <div>
               {activeLoans.slice(0, 1).map((loan) => {
                 const remainingMonths = loan.emiAmount > 0 ? Math.ceil(loan.outstandingPrincipal / loan.emiAmount) : 0;
+                const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+                const isTablet = typeof window !== 'undefined' && window.innerWidth >= 768 && window.innerWidth < 1024;
                 return (
                   <div key={loan.id}>
-                    <div style={{ fontSize: window.innerWidth < 768 ? 13 : 14, fontWeight: 700, color: '#1e293b', marginBottom: 2 }}>{loan.loanName}</div>
-                    <div style={{ fontSize: window.innerWidth < 768 ? 16 : 18, fontWeight: 700, color: '#1e293b' }}>{formatINR(loan.outstandingPrincipal)}</div>
-                    <div style={{ fontSize: window.innerWidth < 768 ? 10 : 11, color: '#94a3b8', marginTop: 2 }}>EMI: <span style={{ fontWeight: 700 }}>{formatINR(loan.emiAmount)}</span> · ~{remainingMonths}m</div>
+                    <div style={{ 
+                      fontSize: isMobile ? 13 : isTablet ? 14 : 14, 
+                      fontWeight: 700, 
+                      color: '#1e293b', 
+                      marginBottom: 2 
+                    }}>{loan.loanName}</div>
+                    <div style={{ 
+                      fontSize: isMobile ? 16 : isTablet ? 17 : 18, 
+                      fontWeight: 700, 
+                      color: '#1e293b' 
+                    }}>{formatINR(loan.outstandingPrincipal)}</div>
+                    <div style={{ 
+                      fontSize: isMobile ? 10 : isTablet ? 11 : 11, 
+                      color: '#94a3b8', 
+                      marginTop: 2 
+                    }}>EMI: <span style={{ fontWeight: 700 }}>{formatINR(loan.emiAmount)}</span> · ~{remainingMonths}m</div>
                   </div>
                 );
               })}
@@ -226,51 +245,65 @@ export default function DashboardPage() {
 
 function Card({ label, value, color, highlight }: { label: string; value: string; color: string; highlight?: boolean }) {
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+  const isTablet = typeof window !== 'undefined' && window.innerWidth >= 768 && window.innerWidth < 1024;
+  
   return (
     <div style={{
       background: '#fff', 
       borderRadius: 10, 
-      padding: isMobile ? '12px 16px' : '16px 20px',
+      padding: isMobile ? '12px 16px' : isTablet ? '14px 18px' : '16px 20px',
       boxShadow: '0 1px 4px rgba(0,0,0,0.08)', 
       borderLeft: `4px solid ${color}`,
     }}>
       <div style={{ fontSize: 12, color: '#64748b', marginBottom: 6 }}>{label}</div>
-      <div style={{ fontSize: isMobile ? 16 : 18, fontWeight: 700, color: highlight ? '#ef4444' : '#1e293b' }}>{value}</div>
+      <div style={{ 
+        fontSize: isMobile ? 16 : isTablet ? 17 : 18, 
+        fontWeight: 700, 
+        color: highlight ? '#ef4444' : '#1e293b' 
+      }}>{value}</div>
     </div>
   );
 }
 
 function IncomeCard({ salary, pf, variablePay, labels }: { salary: string; pf: string; variablePay: string; labels?: string }) {
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+  const isTablet = typeof window !== 'undefined' && window.innerWidth >= 768 && window.innerWidth < 1024;
   const defaultLabels = labels || "Salary / PF / Variable Pay";
   const displayValues = variablePay ? `${salary} / ${pf} / ${variablePay}` : `${salary} / ${pf}`;
+  
   return (
     <div style={{
       background: '#fff', 
       borderRadius: 10, 
-      padding: isMobile ? '12px 16px' : '16px 20px',
+      padding: isMobile ? '12px 16px' : isTablet ? '14px 18px' : '16px 20px',
       boxShadow: '0 1px 4px rgba(0,0,0,0.08)', 
       borderLeft: '4px solid #22c55e',
     }}>
       <div style={{ fontSize: 12, color: '#64748b', marginBottom: 6 }}>{defaultLabels}</div>
-      <div style={{ fontSize: isMobile ? 14 : 18, fontWeight: 700, color: '#1e293b' }}>{displayValues}</div>
+      <div style={{ 
+        fontSize: isMobile ? 14 : isTablet ? 16 : 18, 
+        fontWeight: 700, 
+        color: '#1e293b' 
+      }}>{displayValues}</div>
     </div>
   );
 }
 
 function InvestmentCard({ invested, current, gainLoss }: { invested: string; current: string; gainLoss: string }) {
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+  const isTablet = typeof window !== 'undefined' && window.innerWidth >= 768 && window.innerWidth < 1024;
+  
   return (
     <div style={{
       background: '#fff', 
       borderRadius: 10, 
-      padding: isMobile ? '12px 16px' : '16px 20px',
+      padding: isMobile ? '12px 16px' : isTablet ? '14px 18px' : '16px 20px',
       boxShadow: '0 1px 4px rgba(0,0,0,0.08)', 
       borderLeft: '4px solid #3b82f6',
     }}>
       <div style={{ fontSize: 12, color: '#64748b', marginBottom: 6 }}>Total Invested / Current Value / Total Gain/Loss</div>
       <div style={{ 
-        fontSize: isMobile ? 12 : 18, 
+        fontSize: isMobile ? 12 : isTablet ? 14 : 16, 
         fontWeight: 700, 
         color: '#1e293b', 
         whiteSpace: 'nowrap', 
