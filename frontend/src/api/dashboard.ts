@@ -65,9 +65,35 @@ export const useDashboardSummary = (month: string) => {
           .filter((r: any) => r.type === 'debit')
           .reduce((sum: number, r: any) => sum + Number(r.amount), 0);
 
-        // Fetch investments for current user ONLY
-        const investRes = await supabaseClient.get(`/investment_holdings?user_id=eq.${user.id}&is_closed=eq.false&select=quantity,purchase_price`);
-        const portfolioInvestedValue = investRes.data.reduce((sum: number, row: any) => sum + (parseFloat(row.quantity || 0) * parseFloat(row.purchase_price || 0)), 0);
+        // Fetch investments — use price_cache for current value if available
+        const investRes = await supabaseClient.get(
+          `/investment_holdings?user_id=eq.${user.id}&is_closed=eq.false&select=quantity,purchase_price,stock_symbol`
+        );
+        const portfolioInvestedValue = investRes.data.reduce(
+          (sum: number, row: any) => sum + (parseFloat(row.quantity || 0) * parseFloat(row.purchase_price || 0)), 0
+        );
+
+        // Try to get current prices from price_cache for portfolio current value
+        let portfolioCurrentValue = portfolioInvestedValue; // fallback = invested
+        try {
+          const symbols = investRes.data.map((r: any) => r.stock_symbol).filter(Boolean);
+          if (symbols.length > 0) {
+            const priceRes = await supabaseClient.get(
+              `/price_cache?symbol=in.(${symbols.map((s: string) => `"${s}"`).join(',')})&select=symbol,current_price`
+            );
+            const priceMap: Record<string, number> = {};
+            (priceRes.data || []).forEach((p: any) => {
+              if (p.current_price) priceMap[p.symbol] = parseFloat(p.current_price);
+            });
+            portfolioCurrentValue = investRes.data.reduce((sum: number, row: any) => {
+              const qty = parseFloat(row.quantity || 0);
+              const ltp = priceMap[row.stock_symbol] || parseFloat(row.purchase_price || 0);
+              return sum + qty * ltp;
+            }, 0);
+          }
+        } catch {
+          // price_cache unavailable — use invested value
+        }
 
         // Fetch savings for current user ONLY
         const savingsRes = await supabaseClient.get(`/savings_transactions?user_id=eq.${user.id}&select=type,amount`);
@@ -89,10 +115,12 @@ export const useDashboardSummary = (month: string) => {
           monthlySurplus: parseFloat(monthlySurplus.toFixed(2)),    // income - expenses - EMI
           savingsRate: parseFloat(savingsRate.toFixed(2)),
           netWorth: parseFloat(netWorth.toFixed(2)),
-          portfolioCurrentValue: parseFloat(portfolioInvestedValue.toFixed(2)),
+          portfolioCurrentValue: parseFloat(portfolioCurrentValue.toFixed(2)),
           portfolioInvestedValue: parseFloat(portfolioInvestedValue.toFixed(2)),
-          portfolioGainLoss: 0,
-          portfolioGainLossPct: 0,
+          portfolioGainLoss: parseFloat((portfolioCurrentValue - portfolioInvestedValue).toFixed(2)),
+          portfolioGainLossPct: portfolioInvestedValue > 0
+            ? parseFloat(((portfolioCurrentValue - portfolioInvestedValue) / portfolioInvestedValue * 100).toFixed(2))
+            : 0,
           savingsBalance: parseFloat(savingsBalance.toFixed(2)),
           outstandingLoanPrincipal: parseFloat(outstandingLoanPrincipal.toFixed(2)),
           monthlyEmi: parseFloat(monthlyEmi.toFixed(2)),

@@ -56,12 +56,32 @@ export default function DashboardPage() {
       </div>
 
       {/* Row 3 — Obligations */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 16 }}>
         <Card label="Fixed Expenses (Rent etc.)" value={formatINR(summary?.totalExpenses ?? 0)} color="#ef4444" />
         <Card label="Monthly EMI" value={formatINR(summary?.monthlyEmi ?? 0)} color="#f97316" />
         <Card label="Bank Debits (This Month)" value={formatINR(summary?.cashExpenses ?? 0)} color="#94a3b8" />
         <Card label="Loan Outstanding" value={formatINR(summary?.outstandingLoanPrincipal ?? 0)} color="#be123c" />
       </div>
+
+      {/* Row 4 — Portfolio summary */}
+      {(() => {
+        const invested = summary?.portfolioInvestedValue ?? 0;
+        const current  = summary?.portfolioCurrentValue ?? 0;
+        const gain     = current - invested;
+        const gainPct  = invested > 0 ? (gain / invested) * 100 : 0;
+        return (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 24 }}>
+            <Card label="Total Invested" value={formatINR(invested)} color="#3b82f6" />
+            <Card label="Current Value"  value={formatINR(current)}  color="#8b5cf6" />
+            <Card
+              label="Total Gain/Loss"
+              value={`${formatINR(gain)} (${gainPct.toFixed(2)}%)`}
+              color={gain >= 0 ? '#22c55e' : '#ef4444'}
+              highlight={gain < 0}
+            />
+          </div>
+        );
+      })()}
 
       {/* Daily chart — current month day by day */}
       {dailyChart && dailyChart.length > 0 && (
