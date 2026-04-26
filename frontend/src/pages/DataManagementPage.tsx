@@ -10,7 +10,7 @@ const COL_MAP: Record<string, string> = {
   stock: 'symbol', scrip: 'symbol', name: 'symbol',
   'stock name': 'symbol', 'stock symbol': 'symbol',
 
-  qty: 'qty', quantity: 'qty', shares: 'qty', units: 'qty',
+  qty: 'qty', quantity: 'qty', shares: 'qty', units: 'qty', 'qty.': 'qty',
 
   'avg. cost': 'avgCost', 'avg cost': 'avgCost', 'average cost': 'avgCost',
   'avg price': 'avgCost', 'average price': 'avgCost',
@@ -43,6 +43,12 @@ interface ParsedRow {
   dayChg: number;
 }
 
+interface ParseResult {
+  rows: ParsedRow[];
+  detectedHeaders: string[];   // raw headers found in file
+  mappedCols: Record<string, number>; // canonical → col index
+}
+
 function normaliseHeader(h: unknown): string {
   if (h === null || h === undefined) return '';
   return h.toString().trim().toLowerCase().replace(/\s+/g, ' ');
@@ -68,11 +74,13 @@ function findHeaderRowIndex(rawRows: unknown[][]): number {
   return 0;
 }
 
-function parseRows(rawRows: unknown[][]): ParsedRow[] {
-  if (rawRows.length < 2) return [];
+function parseRows(rawRows: unknown[][]): ParseResult {
+  if (rawRows.length < 2) return { rows: [], detectedHeaders: [], mappedCols: {} };
 
   const headerIdx = findHeaderRowIndex(rawRows);
-  const headers = (rawRows[headerIdx] as unknown[]).map(normaliseHeader);
+  const rawHeaders = (rawRows[headerIdx] as unknown[]);
+  const headers = rawHeaders.map(normaliseHeader);
+  const detectedHeaders = rawHeaders.map(h => String(h ?? '').trim());
 
   const colIndex: Record<string, number> = {};
   headers.forEach((h, i) => {
@@ -100,10 +108,10 @@ function parseRows(rawRows: unknown[][]): ParsedRow[] {
       dayChg:   toNum(get('dayChg')),
     });
   }
-  return results;
+  return { rows: results, detectedHeaders, mappedCols: colIndex };
 }
 
-async function parseSpreadsheet(file: File): Promise<ParsedRow[]> {
+async function parseSpreadsheet(file: File): Promise<ParseResult> {
   const buf = await file.arrayBuffer();
   const wb = XLSX.read(buf, { type: 'array' });
   const ws = wb.Sheets[wb.SheetNames[0]];
@@ -111,7 +119,7 @@ async function parseSpreadsheet(file: File): Promise<ParsedRow[]> {
   return parseRows(raw);
 }
 
-async function parseCsvText(file: File): Promise<ParsedRow[]> {
+async function parseCsvText(file: File): Promise<ParseResult> {
   const text = await file.text();
   const lines = text.split(/\r?\n/).filter(Boolean);
   const raw = lines.map((l) => l.split(',').map((c) => c.trim().replace(/^"|"$/g, '')));
@@ -125,6 +133,8 @@ export default function DataManagementPage() {
   const qc = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
   const [rows, setRows] = useState<ParsedRow[]>([]);
+  const [detectedHeaders, setDetectedHeaders] = useState<string[]>([]);
+  const [mappedCols, setMappedCols] = useState<Record<string, number>>({});
   const [fileName, setFileName] = useState('');
   const [parseError, setParseError] = useState('');
   const [importing, setImporting] = useState(false);
@@ -137,29 +147,38 @@ export default function DataManagementPage() {
     setFileName(file.name);
     setParseError('');
     setRows([]);
+    setDetectedHeaders([]);
+    setMappedCols({});
     setImportMsg('');
     setImportProgress('');
 
     try {
       const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
-      let parsed: ParsedRow[] = [];
+      let result: ParseResult;
 
       if (ext === 'csv') {
-        parsed = await parseCsvText(file);
+        result = await parseCsvText(file);
       } else if (['xlsx', 'xls', 'ods'].includes(ext)) {
-        parsed = await parseSpreadsheet(file);
+        result = await parseSpreadsheet(file);
       } else if (['pdf', 'png', 'jpg', 'jpeg', 'webp'].includes(ext)) {
         setParseError('PDF/image files are not supported. Please export as CSV or Excel from your broker.');
         return;
       } else {
-        parsed = await parseCsvText(file);
+        result = await parseCsvText(file);
       }
 
-      if (parsed.length === 0) {
-        setParseError('No data rows found. Make sure the file has a header row with columns like Instrument, Qty, Avg. cost.');
+      setDetectedHeaders(result.detectedHeaders);
+      setMappedCols(result.mappedCols);
+
+      if (result.rows.length === 0) {
+        setParseError(
+          `No data rows found. Headers detected: [${result.detectedHeaders.join(', ')}]. ` +
+          `Mapped columns: ${JSON.stringify(result.mappedCols)}. ` +
+          `Make sure the file has Instrument/Symbol and Qty./Qty columns.`
+        );
         return;
       }
-      setRows(parsed);
+      setRows(result.rows);
     } catch (err) {
       setParseError(err instanceof Error ? err.message : 'Failed to parse file');
     }
@@ -214,6 +233,8 @@ export default function DataManagementPage() {
 
   const handleClear = () => {
     setRows([]);
+    setDetectedHeaders([]);
+    setMappedCols({});
     setFileName('');
     setParseError('');
     setImportMsg('');
@@ -259,6 +280,17 @@ export default function DataManagementPage() {
           <p style={{ fontSize: 12, color: '#b45309', marginTop: 8, background: '#fffbeb', padding: '6px 10px', borderRadius: 6, border: '1px solid #fde68a' }}>
             ⚠️ "Replace All Holdings" will delete your existing holdings and insert these {rows.length} rows fresh.
           </p>
+        )}
+
+        {/* Show detected headers for debugging */}
+        {detectedHeaders.length > 0 && rows.length > 0 && (
+          <div style={{ marginTop: 10, fontSize: 12, color: '#475569', background: '#f8fafc', padding: '6px 10px', borderRadius: 6, border: '1px solid #e2e8f0' }}>
+            <strong>Detected columns:</strong> {detectedHeaders.filter(Boolean).join(' | ')}
+            {' · '}
+            <strong>Qty mapped:</strong> {'qty' in mappedCols ? `✅ col ${mappedCols['qty']}` : '❌ NOT FOUND'}
+            {' · '}
+            <strong>Symbol mapped:</strong> {'symbol' in mappedCols ? `✅ col ${mappedCols['symbol']}` : '❌ NOT FOUND'}
+          </div>
         )}
 
         {importProgress && (
