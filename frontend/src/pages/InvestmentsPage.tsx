@@ -27,16 +27,16 @@ interface ComputedRow extends HoldingWithPriceError {
 type SortKey = 'stockSymbol' | 'quantity' | 'purchasePrice' | 'ltp' | 'invested' | 'curVal' | 'pnl' | 'pnlPct';
 type SortDir = 'asc' | 'desc';
 
-const COLUMNS: { label: string; key: SortKey | null }[] = [
-  { label: 'Instrument', key: 'stockSymbol' },
-  { label: 'Qty',        key: 'quantity' },
-  { label: 'Avg. Cost',  key: 'purchasePrice' },
-  { label: 'LTP',        key: 'ltp' },
-  { label: 'Invested',   key: 'invested' },
-  { label: 'Cur. Val',   key: 'curVal' },
-  { label: 'P&L',        key: 'pnl' },
-  { label: 'P&L %',      key: 'pnlPct' },
-  { label: '',           key: null },   // Delete button column
+const COLUMNS: { label: string; key: SortKey | null; align: 'left' | 'right' | 'center' }[] = [
+  { label: 'Instrument', key: 'stockSymbol',  align: 'left' },
+  { label: 'Qty',        key: 'quantity',     align: 'right' },
+  { label: 'Avg. Cost',  key: 'purchasePrice',align: 'right' },
+  { label: 'LTP',        key: 'ltp',          align: 'right' },
+  { label: 'Invested',   key: 'invested',     align: 'right' },
+  { label: 'Cur. Val',   key: 'curVal',       align: 'right' },
+  { label: 'P&L',        key: 'pnl',          align: 'right' },
+  { label: 'P&L %',      key: 'pnlPct',       align: 'right' },
+  { label: '',           key: null,           align: 'center' },
 ];
 
 export default function InvestmentsPage() {
@@ -227,6 +227,7 @@ export default function InvestmentsPage() {
                       onClick={() => handleSort(col.key)}
                       style={{
                         ...thStyle,
+                        textAlign: col.align,
                         cursor: col.key ? 'pointer' : 'default',
                         userSelect: 'none',
                         whiteSpace: 'nowrap',
@@ -254,7 +255,7 @@ export default function InvestmentsPage() {
                         background: idx % 2 === 0 ? '#fff' : '#f8fafc',
                       }}
                     >
-                      <td style={{ ...tdStyle, fontWeight: 600 }}>{h.stockSymbol}</td>
+                      <td style={{ ...tdStyle, textAlign: 'left', fontWeight: 600 }}>{h.stockSymbol}</td>
                       <td style={{ ...tdStyle, textAlign: 'right' }}>
                         {Number(h.quantity).toLocaleString('en-IN')}
                       </td>
@@ -290,10 +291,10 @@ export default function InvestmentsPage() {
               {/* Totals row */}
               <tfoot>
                 <tr style={{ background: '#f1f5f9', fontWeight: 700, borderTop: '2px solid #cbd5e1' }}>
-                  <td style={{ ...tdStyle, fontWeight: 700 }}>Total</td>
-                  <td style={tdStyle} />
-                  <td style={tdStyle} />
-                  <td style={tdStyle} />
+                  <td style={{ ...tdStyle, textAlign: 'left',  fontWeight: 700 }}>Total</td>
+                  <td style={{ ...tdStyle, textAlign: 'right' }} />
+                  <td style={{ ...tdStyle, textAlign: 'right' }} />
+                  <td style={{ ...tdStyle, textAlign: 'right' }} />
                   <td style={{ ...tdStyle, textAlign: 'right', fontWeight: 700 }}>{formatINR(totalInvested)}</td>
                   <td style={{ ...tdStyle, textAlign: 'right', fontWeight: 700 }}>{formatINR(totalCurrentValue)}</td>
                   <td style={{ ...tdStyle, textAlign: 'right', fontWeight: 700, color: totalGain >= 0 ? '#16a34a' : '#dc2626' }}>
@@ -302,7 +303,7 @@ export default function InvestmentsPage() {
                   <td style={{ ...tdStyle, textAlign: 'right', fontWeight: 700, color: totalGain >= 0 ? '#16a34a' : '#dc2626' }}>
                     {formatPct(totalGainPct)}
                   </td>
-                  <td style={tdStyle} />
+                  <td style={{ ...tdStyle, textAlign: 'center' }} />
                 </tr>
               </tfoot>
             </table>
@@ -374,7 +375,7 @@ const smallBtn = (bg: string): React.CSSProperties => ({
   padding: '4px 10px', cursor: 'pointer', fontSize: 12,
 });
 const thStyle: React.CSSProperties = {
-  padding: '8px 12px', textAlign: 'left', fontWeight: 600, color: '#475569',
+  padding: '8px 12px', fontWeight: 600, color: '#475569',
 };
 const tdStyle: React.CSSProperties = {
   padding: '8px 12px', color: '#334155',
