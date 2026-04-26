@@ -54,14 +54,28 @@ export default function DashboardPage() {
         <Card label="Monthly Surplus" value={formatINR(surplus)} color={surplus < 0 ? '#ef4444' : '#3b82f6'} highlight={surplus < 0} />
       </div>
 
-      {/* Row 2 — Monthly totals */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(1, 1fr)', gap: 16, marginBottom: 16 }}>
+      {/* Row 2 — Monthly totals, Surplus/Expenses, and Investments */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 16 }}>
+        <Card label="Monthly Spend & Receive" value={`${formatINR(dailyExp?.monthTotal ?? 0)} / ${formatINR(dailyExp?.monthCredit ?? 0)}`} color="#dc2626" />
         <IncomeCard 
           salary={formatINR(surplus)}
           pf={formatINR(summary?.totalExpenses ?? 0)}
           variablePay=""
           labels="Monthly Surplus / Fixed Expenses"
         />
+        {(() => {
+          const invested  = portfolio?.investedValue  ?? summary?.portfolioInvestedValue ?? 0;
+          const current   = portfolio?.currentValue   ?? summary?.portfolioCurrentValue  ?? 0;
+          const gain      = portfolio?.gainLoss       ?? 0;
+          const gainPct   = portfolio?.gainLossPct    ?? 0;
+          return (
+            <InvestmentCard 
+              invested={formatINR(invested)}
+              current={formatINR(current)}
+              gainLoss={`${formatINR(gain)} (${gainPct.toFixed(2)}%)`}
+            />
+          );
+        })()}
       </div>
 
       {/* Loan breakdown — one card per active loan */}
