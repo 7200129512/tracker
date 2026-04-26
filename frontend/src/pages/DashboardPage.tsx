@@ -96,53 +96,6 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Loan breakdown — one card per active loan */}
-      {activeLoans.length > 0 && (
-        <div style={{ marginBottom: 16 }}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: '#64748b', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            Loan Breakdown
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 12 }}>
-            {activeLoans.map((loan) => {
-              const remainingMonths = loan.emiAmount > 0 ? Math.ceil(loan.outstandingPrincipal / loan.emiAmount) : 0;
-              return (
-                <div key={loan.id} style={{ background: '#fff', borderRadius: 10, padding: '14px 16px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', borderLeft: '4px solid #f97316' }}>
-                  <div style={{ fontSize: 12, color: '#64748b', marginBottom: 2 }}>{loan.loanName}</div>
-                  <div style={{ fontSize: 18, fontWeight: 700, color: '#1e293b' }}>{formatINR(loan.outstandingPrincipal)}</div>
-                  <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 4 }}>
-                    EMI: {formatINR(loan.emiAmount)} · ~{remainingMonths} months left
-                  </div>
-                  <div style={{ background: '#e2e8f0', borderRadius: 3, height: 4, marginTop: 8 }}>
-                    <div style={{
-                      background: '#f97316',
-                      width: `${Math.min(loan.originalPrincipal > 0 ? ((loan.originalPrincipal - loan.outstandingPrincipal) / loan.originalPrincipal) * 100 : 0, 100)}%`,
-                      height: 4, borderRadius: 3,
-                    }} />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Investment Summary */}
-      {(() => {
-        const invested  = portfolio?.investedValue  ?? summary?.portfolioInvestedValue ?? 0;
-        const current   = portfolio?.currentValue   ?? summary?.portfolioCurrentValue  ?? 0;
-        const gain      = portfolio?.gainLoss       ?? 0;
-        const gainPct   = portfolio?.gainLossPct    ?? 0;
-        return (
-          <div style={{ marginBottom: 16 }}>
-            <InvestmentCard 
-              invested={formatINR(invested)}
-              current={formatINR(current)}
-              gainLoss={`${formatINR(gain)} (${gainPct.toFixed(2)}%)`}
-            />
-          </div>
-        );
-      })()}
-
       {/* Daily chart — current month day by day */}
       {dailyChart && dailyChart.length > 0 && (
         <div style={{ ...cardStyle, marginTop: 8 }}>
