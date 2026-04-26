@@ -154,9 +154,9 @@ export default function ExpensesPage() {
           <h3 style={{ marginBottom: 20, fontSize: 18, fontWeight: 600, color: '#334155' }}>
             Category Breakdown — {formatMonth(month)}
           </h3>
-          <div style={{ display: 'flex', gap: 40, alignItems: 'center', flexWrap: 'wrap' }}>
-            <PieChart width={260} height={220}>
-              <Pie data={breakdown} dataKey="amount" nameKey="category" cx="50%" cy="50%" outerRadius={85}>
+          <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+            <PieChart width={240} height={200}>
+              <Pie data={breakdown} dataKey="amount" nameKey="category" cx="50%" cy="50%" outerRadius={80}>
                 {breakdown.map((_, i) => (
                   <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
                 ))}
@@ -164,7 +164,7 @@ export default function ExpensesPage() {
               <Legend />
               <Tooltip formatter={(v: number) => formatINR(v)} />
             </PieChart>
-            <div style={{ flex: 1, minWidth: 280 }}>
+            <div style={{ flex: '0 1 auto', minWidth: 320 }}>
               <table style={{ width: '100%', fontSize: 14 }}>
                 <thead>
                   <tr style={{ borderBottom: '2px solid #e2e8f0' }}>
