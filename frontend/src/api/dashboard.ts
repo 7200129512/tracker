@@ -41,12 +41,10 @@ export const useDashboardSummary = (month: string) => {
           }
         });
 
-        // Fetch expense entries — include ALL fixed/variable expenses regardless of date
-        // (Fixed expenses like rent, internet are recurring every month)
+        // Fetch expense entries — ALL entries for this user (fixed expenses recur monthly)
         const expenseRes = await supabaseClient.get(
           `/expense_entries?user_id=eq.${user.id}&select=amount,type,category`
         );
-        // Sum all fixed expenses (they recur monthly) + variable expenses entered this month
         const totalExpenses = expenseRes.data.reduce((sum: number, row: any) => sum + parseFloat(row.amount || 0), 0);
 
         // Fetch loans for current user ONLY
@@ -54,7 +52,8 @@ export const useDashboardSummary = (month: string) => {
         const outstandingLoanPrincipal = loanRes.data.reduce((sum: number, row: any) => sum + parseFloat(row.outstanding_principal || 0), 0);
         const monthlyEmi = loanRes.data.reduce((sum: number, row: any) => sum + parseFloat(row.emi_amount || 0), 0);
 
-        // Fetch cash/daily expenses for current month from daily_transactions
+        // Cash spent this month — from daily_transactions (display only, NOT used in surplus)
+        // daily_transactions include bank transfers, investments etc. so they can't be used for surplus
         const { supabase } = await import('./auth');
         const { data: dailyData } = await supabase
           .from('daily_transactions')
@@ -77,16 +76,17 @@ export const useDashboardSummary = (month: string) => {
           return row.type === 'Deposit' ? sum + amount : sum - amount;
         }, 0);
 
-        // Monthly Surplus = Income - Fixed Expenses - EMI - Cash Spent this month
-        const totalDeductions = totalExpenses + monthlyEmi + cashExpenses;
-        const monthlySurplus = totalIncome - totalDeductions;
+        // Monthly Surplus = Income - Fixed/Variable Expenses (from expense_entries) - EMI
+        // We do NOT include daily_transactions cash here — those are raw bank debits
+        // that include transfers, investments, EMI payments etc. (would double-count)
+        const monthlySurplus = totalIncome - totalExpenses - monthlyEmi;
         const savingsRate = totalIncome > 0 ? (monthlySurplus / totalIncome) * 100 : 0;
         const netWorth = savingsBalance - outstandingLoanPrincipal;
 
         return {
           totalIncome: parseFloat(totalIncome.toFixed(2)),
-          totalExpenses: parseFloat(totalDeductions.toFixed(2)),   // full deductions: fixed + EMI + cash
-          monthlySurplus: parseFloat(monthlySurplus.toFixed(2)),
+          totalExpenses: parseFloat(totalExpenses.toFixed(2)),      // expense_entries only
+          monthlySurplus: parseFloat(monthlySurplus.toFixed(2)),    // income - expenses - EMI
           savingsRate: parseFloat(savingsRate.toFixed(2)),
           netWorth: parseFloat(netWorth.toFixed(2)),
           portfolioCurrentValue: parseFloat(portfolioInvestedValue.toFixed(2)),
@@ -98,7 +98,7 @@ export const useDashboardSummary = (month: string) => {
           monthlyEmi: parseFloat(monthlyEmi.toFixed(2)),
           pfAmount: parseFloat(pfAmount.toFixed(2)),
           variablePayAmount: parseFloat(variablePayAmount.toFixed(2)),
-          cashExpenses: parseFloat(cashExpenses.toFixed(2)),
+          cashExpenses: parseFloat(cashExpenses.toFixed(2)),        // display only
         };
       } catch (error) {
         console.error('Dashboard error:', error);

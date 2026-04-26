@@ -57,9 +57,9 @@ export default function DashboardPage() {
 
       {/* Row 3 — Obligations */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
-        <Card label="Fixed Expenses" value={formatINR((summary?.totalExpenses ?? 0) - (summary?.monthlyEmi ?? 0) - (summary?.cashExpenses ?? 0))} color="#ef4444" />
+        <Card label="Fixed Expenses (Rent etc.)" value={formatINR(summary?.totalExpenses ?? 0)} color="#ef4444" />
         <Card label="Monthly EMI" value={formatINR(summary?.monthlyEmi ?? 0)} color="#f97316" />
-        <Card label="Cash Spent (This Month)" value={formatINR(summary?.cashExpenses ?? 0)} color="#dc2626" />
+        <Card label="Bank Debits (This Month)" value={formatINR(summary?.cashExpenses ?? 0)} color="#94a3b8" />
         <Card label="Loan Outstanding" value={formatINR(summary?.outstandingLoanPrincipal ?? 0)} color="#be123c" />
       </div>
 
