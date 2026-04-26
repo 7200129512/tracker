@@ -39,6 +39,7 @@ const EMPTY = {
   outstandingPrincipal: 0,
   emiAmount: 0,
   interestRatePa: 0,
+  tenureMonths: 0,
   emiStartDate: new Date().toISOString().slice(0, 10),
   isClosed: false,
 };
@@ -86,6 +87,7 @@ export default function LoansPage() {
       outstandingPrincipal: loan.outstandingPrincipal,
       emiAmount: loan.emiAmount,
       interestRatePa: loan.interestRatePa,
+      tenureMonths: (loan as any).tenureMonths || 0,
       emiStartDate: loan.emiStartDate,
       isClosed: loan.isClosed,
     });
@@ -200,6 +202,15 @@ export default function LoansPage() {
                 />
               </div>
               <div style={fieldGroup}>
+                <label style={labelStyle}>Tenure (months)</label>
+                <input
+                  type="number" placeholder="e.g. 60"
+                  value={form.tenureMonths || ''}
+                  onChange={(e) => setForm({ ...form, tenureMonths: Number(e.target.value) })}
+                  min={1} style={inputStyle}
+                />
+              </div>
+              <div style={fieldGroup}>
                 <label style={labelStyle}>EMI Start Date</label>
                 <input
                   type="date" value={form.emiStartDate}
@@ -287,10 +298,15 @@ function LoanCard({
     ? ((loan.originalPrincipal - loan.outstandingPrincipal) / loan.originalPrincipal) * 100
     : 0;
 
-  // Estimate remaining months
-  const remainingMonths = loan.emiAmount > 0
-    ? Math.ceil(loan.outstandingPrincipal / loan.emiAmount)
+  const tenureMonths = (loan as any).tenureMonths || 0;
+  // Remaining months: use tenure - elapsed if tenure given, else estimate from outstanding/EMI
+  const elapsedMonths = tenureMonths > 0 && loan.emiStartDate
+    ? Math.floor((Date.now() - new Date(loan.emiStartDate).getTime()) / (1000 * 60 * 60 * 24 * 30))
     : 0;
+  const remainingMonths = tenureMonths > 0
+    ? Math.max(tenureMonths - elapsedMonths, 0)
+    : (loan.emiAmount > 0 ? Math.ceil(loan.outstandingPrincipal / loan.emiAmount) : 0);
+  const totalDuration = tenureMonths > 0 ? `${tenureMonths} months total` : '';
 
   return (
     <div style={{
@@ -326,7 +342,11 @@ function LoanCard({
         <Stat label="Outstanding" value={formatINR(loan.outstandingPrincipal)} color={color} />
         <Stat label="Monthly EMI" value={formatINR(loan.emiAmount)} color="#f97316" />
         <Stat label="Interest Rate" value={`${loan.interestRatePa}% p.a.`} color="#8b5cf6" />
-        <Stat label="Est. Remaining" value={closed ? 'Closed' : `${remainingMonths} months`} color="#64748b" />
+        <Stat
+          label={tenureMonths > 0 ? `Remaining (of ${tenureMonths}m)` : 'Est. Remaining'}
+          value={closed ? 'Closed' : `${remainingMonths} months`}
+          color="#64748b"
+        />
       </div>
 
       {/* Progress bar */}
@@ -334,7 +354,7 @@ function LoanCard({
         <div>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#94a3b8', marginBottom: 4 }}>
             <span>Repaid {repaidPct.toFixed(1)}%</span>
-            <span>{formatINR(loan.originalPrincipal - loan.outstandingPrincipal)} of {formatINR(loan.originalPrincipal)}</span>
+            <span>{totalDuration || `~${remainingMonths} months left`}</span>
           </div>
           <div style={{ background: '#e2e8f0', borderRadius: 4, height: 6 }}>
             <div style={{ background: color, width: `${Math.min(repaidPct, 100)}%`, height: 6, borderRadius: 4, transition: 'width 0.3s' }} />

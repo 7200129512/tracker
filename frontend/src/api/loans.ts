@@ -26,6 +26,7 @@ export const useLoans = () => {
           isClosed: row.is_closed || false,
           remainingInstalments: row.remaining_instalments || 0,
           estimatedClosureDate: row.estimated_closure_date || '',
+          tenureMonths: row.tenure_months || 0,
         }));
       } catch (error) {
         console.error('Loans error:', error);
@@ -94,6 +95,7 @@ export const useAddLoan = () => {
         emi_start_date: data.emiStartDate,
         user_id: user.id,
       };
+      if ((data as any).tenureMonths) payload.tenure_months = (data as any).tenureMonths;
 
       try {
         return await supabaseClient.post('/loans', payload);
@@ -120,6 +122,7 @@ export const useUpdateLoan = () => {
       const payload: any = {};
       if (data.loanName) payload.loan_name = data.loanName;
       if ((data as any).loanType) payload.loan_type = (data as any).loanType;
+      if ((data as any).tenureMonths !== undefined) payload.tenure_months = (data as any).tenureMonths;
       if (data.originalPrincipal !== undefined) payload.original_principal = data.originalPrincipal;
       if (data.outstandingPrincipal !== undefined) payload.outstanding_principal = data.outstandingPrincipal;
       if (data.emiAmount !== undefined) payload.emi_amount = data.emiAmount;
