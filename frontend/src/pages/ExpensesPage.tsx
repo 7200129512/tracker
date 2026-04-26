@@ -164,21 +164,21 @@ export default function ExpensesPage() {
               <Legend />
               <Tooltip formatter={(v: number) => formatINR(v)} />
             </PieChart>
-            <div style={{ flex: '0 1 auto', minWidth: 320 }}>
-              <table style={{ width: '100%', fontSize: 14 }}>
+            <div style={{ flex: '0 1 auto' }}>
+              <table style={{ fontSize: 14, borderCollapse: 'collapse' }}>
                 <thead>
                   <tr style={{ borderBottom: '2px solid #e2e8f0' }}>
-                    <th style={{ ...thStyle, paddingBottom: 12 }}>Category</th>
-                    <th style={{ ...thStyle, paddingBottom: 12, textAlign: 'right' }}>Amount</th>
-                    <th style={{ ...thStyle, paddingBottom: 12, textAlign: 'right' }}>%</th>
+                    <th style={{ ...thStyle, paddingBottom: 12, paddingRight: 24 }}>Category</th>
+                    <th style={{ ...thStyle, paddingBottom: 12, textAlign: 'right', paddingRight: 16 }}>Amount</th>
+                    <th style={{ ...thStyle, paddingBottom: 12, textAlign: 'right', paddingRight: 0 }}>%</th>
                   </tr>
                 </thead>
                 <tbody>
                   {breakdown.map((b) => (
                     <tr key={b.category} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                      <td style={{ ...tdStyle, paddingTop: 10, paddingBottom: 10 }}>{b.category}</td>
-                      <td style={{ ...tdStyle, paddingTop: 10, paddingBottom: 10, textAlign: 'right', fontWeight: 600 }}>{formatINR(b.amount)}</td>
-                      <td style={{ ...tdStyle, paddingTop: 10, paddingBottom: 10, textAlign: 'right', color: '#64748b' }}>{b.percentage.toFixed(1)}%</td>
+                      <td style={{ ...tdStyle, paddingTop: 10, paddingBottom: 10, paddingRight: 24 }}>{b.category}</td>
+                      <td style={{ ...tdStyle, paddingTop: 10, paddingBottom: 10, textAlign: 'right', fontWeight: 600, paddingRight: 16 }}>{formatINR(b.amount)}</td>
+                      <td style={{ ...tdStyle, paddingTop: 10, paddingBottom: 10, textAlign: 'right', color: '#64748b', paddingRight: 0 }}>{b.percentage.toFixed(1)}%</td>
                     </tr>
                   ))}
                 </tbody>
