@@ -115,23 +115,48 @@ export default function DashboardPage() {
       {/* Daily chart — current month day by day */}
       {dailyChart && dailyChart.length > 0 && (
         <div style={{ ...cardStyle, marginTop: 8 }}>
-          <h3 style={{ marginBottom: 4, color: '#1e293b' }}>Daily Transactions — {monthName}</h3>
-          <p style={{ fontSize: 13, color: '#64748b', marginBottom: 16 }}>Day-by-day spent and received from your bank emails</p>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={dailyChart} margin={{ top: 8, right: 70, left: 10, bottom: 24 }}>
+          <h3 style={{ 
+            marginBottom: 4, 
+            color: '#1e293b', 
+            fontSize: window.innerWidth < 768 ? 16 : 18 
+          }}>Daily Transactions — {monthName}</h3>
+          <p style={{ 
+            fontSize: window.innerWidth < 768 ? 12 : 13, 
+            color: '#64748b', 
+            marginBottom: window.innerWidth < 768 ? 12 : 16 
+          }}>Day-by-day spent and received from your bank emails</p>
+          <ResponsiveContainer 
+            width="100%" 
+            height={window.innerWidth < 768 ? 250 : 300}
+          >
+            <LineChart 
+              data={dailyChart} 
+              margin={{ 
+                top: 8, 
+                right: window.innerWidth < 768 ? 40 : 70, 
+                left: window.innerWidth < 768 ? 5 : 10, 
+                bottom: window.innerWidth < 768 ? 20 : 24 
+              }}
+            >
               <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
               <XAxis
                 dataKey="day"
-                tick={{ fontSize: 11 }}
-                label={{ value: 'Day of Month', position: 'insideBottom', offset: -12, fontSize: 11, fill: '#94a3b8' }}
+                tick={{ fontSize: window.innerWidth < 768 ? 9 : 11 }}
+                label={window.innerWidth < 768 ? undefined : { 
+                  value: 'Day of Month', 
+                  position: 'insideBottom', 
+                  offset: -12, 
+                  fontSize: 11, 
+                  fill: '#94a3b8' 
+                }}
               />
               {/* Left axis — Spent (small ₹ amounts, no k) */}
               <YAxis
                 yAxisId="left"
                 orientation="left"
-                tickFormatter={(v) => `₹${v}`}
-                tick={{ fontSize: 10, fill: '#ef4444' }}
-                width={55}
+                tickFormatter={(v) => window.innerWidth < 768 ? `₹${v > 1000 ? (v/1000).toFixed(0) + 'k' : v}` : `₹${v}`}
+                tick={{ fontSize: window.innerWidth < 768 ? 8 : 10, fill: '#ef4444' }}
+                width={window.innerWidth < 768 ? 35 : 55}
                 allowDecimals={false}
               />
               {/* Right axis — Received (large amounts in k) */}
@@ -139,33 +164,43 @@ export default function DashboardPage() {
                 yAxisId="right"
                 orientation="right"
                 tickFormatter={(v) => v === 0 ? '₹0' : `₹${(v / 1000).toFixed(0)}k`}
-                tick={{ fontSize: 10, fill: '#22c55e' }}
-                width={48}
+                tick={{ fontSize: window.innerWidth < 768 ? 8 : 10, fill: '#22c55e' }}
+                width={window.innerWidth < 768 ? 30 : 48}
                 allowDecimals={false}
               />
               <Tooltip
                 formatter={(v: number, name: string) => [formatINR(v), name === 'spent' ? '🔴 Spent' : '🟢 Received']}
                 labelFormatter={(l) => `Day ${l}`}
-                contentStyle={{ fontSize: 13 }}
+                contentStyle={{ fontSize: window.innerWidth < 768 ? 11 : 13 }}
               />
-              <Legend verticalAlign="top" height={32} formatter={(v) => v === 'spent' ? '🔴 Spent (left)' : '🟢 Received (right)'} />
+              <Legend 
+                verticalAlign="top" 
+                height={window.innerWidth < 768 ? 24 : 32} 
+                formatter={(v) => window.innerWidth < 768 
+                  ? (v === 'spent' ? '🔴 Spent' : '🟢 Received')
+                  : (v === 'spent' ? '🔴 Spent (left)' : '🟢 Received (right)')
+                }
+                wrapperStyle={{ fontSize: window.innerWidth < 768 ? 11 : 13 }}
+              />
               <Line
                 yAxisId="left"
                 type="monotone"
                 dataKey="spent"
                 stroke="#ef4444"
-                strokeWidth={2}
-                dot={(props: any) => props.payload.spent > 0 ? <circle cx={props.cx} cy={props.cy} r={4} fill="#ef4444" /> : <g />}
-                activeDot={{ r: 6 }}
+                strokeWidth={window.innerWidth < 768 ? 1.5 : 2}
+                dot={(props: any) => props.payload.spent > 0 ? 
+                  <circle cx={props.cx} cy={props.cy} r={window.innerWidth < 768 ? 2 : 4} fill="#ef4444" /> : <g />}
+                activeDot={{ r: window.innerWidth < 768 ? 4 : 6 }}
               />
               <Line
                 yAxisId="right"
                 type="monotone"
                 dataKey="received"
                 stroke="#22c55e"
-                strokeWidth={2}
-                dot={(props: any) => props.payload.received > 0 ? <circle cx={props.cx} cy={props.cy} r={4} fill="#22c55e" /> : <g />}
-                activeDot={{ r: 6 }}
+                strokeWidth={window.innerWidth < 768 ? 1.5 : 2}
+                dot={(props: any) => props.payload.received > 0 ? 
+                  <circle cx={props.cx} cy={props.cy} r={window.innerWidth < 768 ? 2 : 4} fill="#22c55e" /> : <g />}
+                activeDot={{ r: window.innerWidth < 768 ? 4 : 6 }}
               />
             </LineChart>
           </ResponsiveContainer>
@@ -173,9 +208,16 @@ export default function DashboardPage() {
       )}
 
       {(!dailyChart || dailyChart.length === 0) && (
-        <div style={{ ...cardStyle, marginTop: 8, textAlign: 'center', padding: '32px 20px' }}>
-          <div style={{ fontSize: 32, marginBottom: 8 }}>📊</div>
-          <p style={{ color: '#64748b', fontSize: 14 }}>No transactions this month yet. Sync your Gmail to see the daily chart.</p>
+        <div style={{ 
+          ...cardStyle, 
+          marginTop: 8, 
+          textAlign: 'center', 
+          padding: window.innerWidth < 768 ? '24px 16px' : '32px 20px' 
+        }}>
+          <div style={{ fontSize: window.innerWidth < 768 ? 24 : 32, marginBottom: 8 }}>📊</div>
+          <p style={{ color: '#64748b', fontSize: window.innerWidth < 768 ? 12 : 14 }}>
+            No transactions this month yet. Sync your Gmail to see the daily chart.
+          </p>
         </div>
       )}
     </div>
