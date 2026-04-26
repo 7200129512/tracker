@@ -1,13 +1,12 @@
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer,
 } from 'recharts';
-import { useDashboardSummary, useCashFlow, useDashboardAlerts, useMonthlyDailyExpenses, useDailyChart } from '../api/dashboard';
+import { useDashboardSummary, useDashboardAlerts, useMonthlyDailyExpenses, useDailyChart } from '../api/dashboard';
 import { formatINR, currentMonth, formatMonth } from '../utils/format';
 
 export default function DashboardPage() {
   const month = currentMonth();
   const { data: summary, isLoading } = useDashboardSummary(month);
-  const { data: cashflow } = useCashFlow();
   const { data: alerts } = useDashboardAlerts(month);
   const { data: dailyExp } = useMonthlyDailyExpenses();
   const { data: dailyChart } = useDailyChart();
