@@ -46,7 +46,11 @@ export default function DashboardPage() {
       {/* Row 1 — Daily bank tracking + Income */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 16 }}>
         <Card label="Daily Spend & Receive" value={`${formatINR(dailyExp?.todayTotal ?? 0)} / ${formatINR(dailyExp?.todayCredit ?? 0)}`} color="#f97316" />
-        <Card label="Income" value={`${formatINR(summary?.totalIncome ?? 0)} / ${formatINR(summary?.pfAmount ?? 0)} / ${formatINR(summary?.variablePayAmount ?? 0)}`} color="#22c55e" />
+        <IncomeCard 
+          salary={formatINR(summary?.totalIncome ?? 0)}
+          pf={formatINR(summary?.pfAmount ?? 0)}
+          variablePay={formatINR(summary?.variablePayAmount ?? 0)}
+        />
         <Card label="Monthly Surplus" value={formatINR(surplus)} color={surplus < 0 ? '#ef4444' : '#3b82f6'} highlight={surplus < 0} />
       </div>
 
@@ -197,6 +201,23 @@ function Card({ label, value, color, highlight }: { label: string; value: string
     }}>
       <div style={{ fontSize: 12, color: '#64748b', marginBottom: 6 }}>{label}</div>
       <div style={{ fontSize: 20, fontWeight: 700, color: highlight ? '#ef4444' : '#1e293b' }}>{value}</div>
+    </div>
+  );
+}
+
+function IncomeCard({ salary, pf, variablePay }: { salary: string; pf: string; variablePay: string }) {
+  return (
+    <div style={{
+      background: '#fff', borderRadius: 10, padding: '16px 20px',
+      boxShadow: '0 1px 4px rgba(0,0,0,0.08)', borderLeft: '4px solid #22c55e',
+    }}>
+      <div style={{ fontSize: 12, color: '#64748b', marginBottom: 8, fontWeight: 600 }}>Income</div>
+      <div style={{ fontSize: 13, color: '#64748b', marginBottom: 2 }}>Salary</div>
+      <div style={{ fontSize: 18, fontWeight: 700, color: '#1e293b', marginBottom: 6 }}>{salary}</div>
+      <div style={{ fontSize: 13, color: '#64748b', marginBottom: 2 }}>PF</div>
+      <div style={{ fontSize: 18, fontWeight: 700, color: '#1e293b', marginBottom: 6 }}>{pf}</div>
+      <div style={{ fontSize: 13, color: '#64748b', marginBottom: 2 }}>Variable Pay</div>
+      <div style={{ fontSize: 18, fontWeight: 700, color: '#1e293b' }}>{variablePay}</div>
     </div>
   );
 }
