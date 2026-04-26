@@ -103,48 +103,61 @@ export default function InvestmentsPage() {
       </div>
 
       <div style={{ ...cardStyle, marginTop: 16 }}>
-        <h3 style={{ marginBottom: 12 }}>Active Holdings {loadingPrices && <span style={{ fontSize: 12, color: '#94a3b8' }}>(updating prices...)</span>}</h3>
+        <h3 style={{ marginBottom: 12 }}>
+          Active Holdings{' '}
+          {loadingPrices && <span style={{ fontSize: 12, color: '#94a3b8' }}>(updating prices…)</span>}
+        </h3>
         {isLoading ? <p>Loading…</p> : holdingsWithPrices.length === 0 ? (
-          <p style={{ color: '#94a3b8' }}>No holdings yet.</p>
+          <p style={{ color: '#94a3b8' }}>No holdings yet. Import from the Data Management page.</p>
         ) : (
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
               <thead>
                 <tr style={{ background: '#f1f5f9' }}>
-                  {['Symbol', 'Name', 'Qty', 'Buy Price', 'Current Price', 'Invested Amount', 'Current Value', 'Gain/Loss', ''].map((h) => (
+                  {['Instrument', 'Qty', 'Avg. Cost', 'LTP', 'Invested', 'Cur. Val', 'P&L', 'P&L %', ''].map((h) => (
                     <th key={h} style={thStyle}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {holdingsWithPrices.map((h) => {
-                  const currentPrice = h.currentPrice || h.purchasePrice;
-                  const investedAmount = h.quantity * h.purchasePrice;
-                  const currentValue = h.quantity * currentPrice;
-                  const gain = currentValue - investedAmount;
-                  const gainPct = investedAmount > 0 ? (gain / investedAmount) * 100 : 0;
-                  const isGain = gain >= 0;
-                  
+                {holdingsWithPrices.map((h, idx) => {
+                  const ltp = h.currentPrice || h.purchasePrice;
+                  const invested = h.quantity * h.purchasePrice;
+                  const curVal = h.quantity * ltp;
+                  const pnl = curVal - invested;
+                  const pnlPct = invested > 0 ? (pnl / invested) * 100 : 0;
+                  const isGain = pnl >= 0;
+
                   return (
-                    <tr key={h.id} style={{ borderBottom: '1px solid #e2e8f0' }}>
-                      <td style={tdStyle}><strong>{h.stockSymbol}</strong></td>
-                      <td style={tdStyle}>{h.stockName}</td>
+                    <tr
+                      key={h.id}
+                      style={{
+                        borderBottom: '1px solid #e2e8f0',
+                        background: idx % 2 === 0 ? '#fff' : '#f8fafc',
+                      }}
+                    >
+                      <td style={{ ...tdStyle, fontWeight: 600 }}>{h.stockSymbol}</td>
                       <td style={tdStyle}>{h.quantity}</td>
                       <td style={tdStyle}>{formatINR(h.purchasePrice)}</td>
                       <td style={tdStyle}>
-                        {h.priceError ? (
-                          <span style={{ color: '#ef4444', fontSize: 11 }}>Error</span>
+                        {(h as HoldingWithPriceError).priceError ? (
+                          <span style={{ color: '#ef4444', fontSize: 11 }}>—</span>
                         ) : (
-                          formatINR(currentPrice)
+                          formatINR(ltp)
                         )}
                       </td>
-                      <td style={tdStyle}>{formatINR(investedAmount)}</td>
-                      <td style={tdStyle}>{formatINR(currentValue)}</td>
-                      <td style={{ ...tdStyle, color: isGain ? '#22c55e' : '#ef4444', fontWeight: 600 }}>
-                        {formatINR(gain)} ({formatPct(gainPct)})
+                      <td style={tdStyle}>{formatINR(invested)}</td>
+                      <td style={tdStyle}>{formatINR(curVal)}</td>
+                      <td style={{ ...tdStyle, color: isGain ? '#16a34a' : '#dc2626', fontWeight: 600 }}>
+                        {formatINR(pnl)}
+                      </td>
+                      <td style={{ ...tdStyle, color: isGain ? '#16a34a' : '#dc2626' }}>
+                        {formatPct(pnlPct)}
                       </td>
                       <td style={tdStyle}>
-                        <button onClick={() => deleteHolding.mutate(h.id)} style={smallBtn('#ef4444')}>Delete</button>
+                        <button onClick={() => deleteHolding.mutate(h.id)} style={smallBtn('#ef4444')}>
+                          Delete
+                        </button>
                       </td>
                     </tr>
                   );

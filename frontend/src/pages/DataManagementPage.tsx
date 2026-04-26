@@ -1,145 +1,373 @@
-import { useState } from 'react';
-import { exportData, importData, confirmImport, resetData } from '../api/dataManagement';
+import { useState, useRef } from 'react';
+import * as XLSX from 'xlsx';
+import { useAddHolding } from '../api/investments';
+
+// ── Column aliases ────────────────────────────────────────────────────────────
+// Maps various header spellings → our canonical key
+const COL_MAP: Record<string, string> = {
+  // Symbol / Instrument
+  instrument: 'symbol',
+  symbol: 'symbol',
+  ticker: 'symbol',
+  stock: 'symbol',
+  scrip: 'symbol',
+  name: 'symbol',
+  'stock name': 'symbol',
+  'stock symbol': 'symbol',
+
+  // Quantity
+  qty: 'qty',
+  quantity: 'qty',
+  shares: 'qty',
+  units: 'qty',
+
+  // Average / Buy price
+  'avg. cost': 'avgCost',
+  'avg cost': 'avgCost',
+  'average cost': 'avgCost',
+  'avg price': 'avgCost',
+  'average price': 'avgCost',
+  'buy price': 'avgCost',
+  'purchase price': 'avgCost',
+  ltp: 'ltp',
+  'last price': 'ltp',
+  'current price': 'ltp',
+  price: 'ltp',
+
+  // Invested
+  invested: 'invested',
+  'invested amount': 'invested',
+  'total invested': 'invested',
+  'buy value': 'invested',
+
+  // Current value
+  'cur. val': 'curVal',
+  'cur val': 'curVal',
+  'current value': 'curVal',
+  'market value': 'curVal',
+  value: 'curVal',
+
+  // P&L
+  'p&l': 'pnl',
+  pnl: 'pnl',
+  'profit & loss': 'pnl',
+  'profit/loss': 'pnl',
+  'unrealised p&l': 'pnl',
+  gain: 'pnl',
+  'gain/loss': 'pnl',
+
+  // Net change
+  'net chg.': 'netChg',
+  'net chg': 'netChg',
+  'net change': 'netChg',
+
+  // Day change
+  'day chg.': 'dayChg',
+  'day chg': 'dayChg',
+  'day change': 'dayChg',
+  'day %': 'dayChg',
+};
+
+interface ParsedRow {
+  symbol: string;
+  qty: number;
+  avgCost: number;
+  ltp: number;
+  invested: number;
+  curVal: number;
+  pnl: number;
+  netChg: number;
+  dayChg: number;
+}
+
+function normaliseHeader(h: string): string {
+  return h.toString().trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
+function toNum(v: unknown): number {
+  if (v === null || v === undefined || v === '') return 0;
+  const n = parseFloat(String(v).replace(/[^0-9.\-]/g, ''));
+  return isNaN(n) ? 0 : n;
+}
+
+/** Parse a 2-D array of rows (first row = headers) into ParsedRow[] */
+function parseRows(rawRows: unknown[][]): ParsedRow[] {
+  if (rawRows.length < 2) return [];
+
+  const headers = (rawRows[0] as string[]).map(normaliseHeader);
+  const colIndex: Record<string, number> = {};
+  headers.forEach((h, i) => {
+    const canonical = COL_MAP[h];
+    if (canonical && !(canonical in colIndex)) colIndex[canonical] = i;
+  });
+
+  const results: ParsedRow[] = [];
+  for (let r = 1; r < rawRows.length; r++) {
+    const row = rawRows[r] as unknown[];
+    const get = (key: string) => (colIndex[key] !== undefined ? row[colIndex[key]] : undefined);
+
+    const symbol = String(get('symbol') ?? '').trim();
+    if (!symbol) continue; // skip blank rows
+
+    results.push({
+      symbol,
+      qty: toNum(get('qty')),
+      avgCost: toNum(get('avgCost')),
+      ltp: toNum(get('ltp')),
+      invested: toNum(get('invested')),
+      curVal: toNum(get('curVal')),
+      pnl: toNum(get('pnl')),
+      netChg: toNum(get('netChg')),
+      dayChg: toNum(get('dayChg')),
+    });
+  }
+  return results;
+}
+
+/** Read XLSX / XLS / CSV via SheetJS */
+async function parseSpreadsheet(file: File): Promise<ParsedRow[]> {
+  const buf = await file.arrayBuffer();
+  const wb = XLSX.read(buf, { type: 'array' });
+  const ws = wb.Sheets[wb.SheetNames[0]];
+  const raw: unknown[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+  return parseRows(raw);
+}
+
+/** Read a plain CSV text file */
+async function parseCsvText(file: File): Promise<ParsedRow[]> {
+  const text = await file.text();
+  const lines = text.split(/\r?\n/).filter(Boolean);
+  const raw = lines.map((l) =>
+    l.split(',').map((c) => c.trim().replace(/^"|"$/g, ''))
+  );
+  return parseRows(raw);
+}
 
 export default function DataManagementPage() {
-  const [importErrors, setImportErrors] = useState<{ row: number; field: string; reason: string }[]>([]);
-  const [importReady, setImportReady] = useState(false);
-  const [importFile, setImportFile] = useState<File | null>(null);
-  const [message, setMessage] = useState('');
-  const [loading, setLoading] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [rows, setRows] = useState<ParsedRow[]>([]);
+  const [fileName, setFileName] = useState('');
+  const [parseError, setParseError] = useState('');
+  const [importing, setImporting] = useState(false);
+  const [importMsg, setImportMsg] = useState('');
+  const addHolding = useAddHolding();
+
+  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setFileName(file.name);
+    setParseError('');
+    setRows([]);
+    setImportMsg('');
+
+    try {
+      const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
+      let parsed: ParsedRow[] = [];
+
+      if (ext === 'csv') {
+        parsed = await parseCsvText(file);
+      } else if (['xlsx', 'xls', 'ods'].includes(ext)) {
+        parsed = await parseSpreadsheet(file);
+      } else if (['pdf', 'png', 'jpg', 'jpeg', 'webp', 'gif'].includes(ext)) {
+        setParseError(
+          'PDF and image files require server-side OCR which is not yet configured. ' +
+          'Please export your holdings as CSV or Excel from your broker and upload that instead.'
+        );
+        return;
+      } else {
+        // Try treating as CSV anyway
+        parsed = await parseCsvText(file);
+      }
+
+      if (parsed.length === 0) {
+        setParseError('No data rows found. Make sure the file has a header row and at least one data row.');
+        return;
+      }
+      setRows(parsed);
+    } catch (err) {
+      setParseError(err instanceof Error ? err.message : 'Failed to parse file');
+    }
+  };
 
   const handleImport = async () => {
-    if (!importFile) return;
-    setLoading(true);
-    setMessage('');
-    setImportErrors([]);
-    try {
-      const result = await importData(importFile);
-      if (result.errors && result.errors.length > 0) {
-        setImportErrors(result.errors);
-        setImportReady(false);
-      } else {
-        setImportReady(true);
-        setMessage('File validated successfully. Click "Confirm Import" to apply.');
+    if (rows.length === 0) return;
+    setImporting(true);
+    setImportMsg('');
+    let success = 0;
+    let failed = 0;
+    for (const row of rows) {
+      try {
+        await addHolding.mutateAsync({
+          stockSymbol: row.symbol,
+          stockName: row.symbol,
+          quantity: row.qty || 1,
+          purchasePrice: row.avgCost || row.ltp || 0,
+          purchaseDate: new Date().toISOString().slice(0, 10),
+        });
+        success++;
+      } catch {
+        failed++;
       }
-    } catch (err: unknown) {
-      setMessage(err instanceof Error ? err.message : 'Import failed');
-    } finally {
-      setLoading(false);
+    }
+    setImporting(false);
+    setImportMsg(
+      failed === 0
+        ? `✅ ${success} holding(s) imported successfully. Go to the Investments tab to view them.`
+        : `⚠️ ${success} imported, ${failed} failed.`
+    );
+    if (success > 0) {
+      setRows([]);
+      setFileName('');
+      if (fileRef.current) fileRef.current.value = '';
     }
   };
 
-  const handleConfirm = async () => {
-    if (!window.confirm('This will replace ALL existing data. Are you sure?')) return;
-    setLoading(true);
-    try {
-      await confirmImport();
-      setMessage('✅ Data imported successfully.');
-      setImportReady(false);
-      setImportFile(null);
-    } catch (err: unknown) {
-      setMessage(err instanceof Error ? err.message : 'Confirm failed');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleReset = async () => {
-    if (!window.confirm('This will reset ALL data to defaults. Are you sure?')) return;
-    setLoading(true);
-    try {
-      await resetData();
-      setMessage('✅ Data reset to defaults.');
-    } catch (err: unknown) {
-      setMessage(err instanceof Error ? err.message : 'Reset failed');
-    } finally {
-      setLoading(false);
-    }
+  const handleClear = () => {
+    setRows([]);
+    setFileName('');
+    setParseError('');
+    setImportMsg('');
+    if (fileRef.current) fileRef.current.value = '';
   };
 
   return (
     <div>
       <h2 style={{ marginBottom: 20, color: '#1e293b' }}>Data Management</h2>
 
-      {message && (
-        <div style={{ background: '#f0fdf4', border: '1px solid #22c55e', color: '#166534', borderRadius: 8, padding: '10px 16px', marginBottom: 16, fontSize: 14 }}>
-          {message}
-        </div>
-      )}
-
-      {/* Export */}
+      {/* ── Upload card ─────────────────────────────────────────────────────── */}
       <div style={cardStyle}>
-        <h3 style={{ marginBottom: 8 }}>Export Data</h3>
-        <p style={{ color: '#64748b', fontSize: 14, marginBottom: 12 }}>
-          Download all your financial data as a CSV file.
+        <h3 style={{ marginBottom: 6 }}>Import Holdings from File</h3>
+        <p style={{ color: '#64748b', fontSize: 14, marginBottom: 14 }}>
+          Upload your broker's holdings export — <strong>CSV</strong> or <strong>Excel (.xlsx / .xls)</strong>.
+          The file should have columns like <em>Instrument, Qty, Avg. cost, LTP, Invested, Cur. val, P&amp;L</em>.
         </p>
-        <button onClick={exportData} style={btnStyle('#22c55e')}>⬇️ Export CSV</button>
-      </div>
 
-      {/* Import */}
-      <div style={{ ...cardStyle, marginTop: 16 }}>
-        <h3 style={{ marginBottom: 8 }}>Import Data</h3>
-        <p style={{ color: '#64748b', fontSize: 14, marginBottom: 12 }}>
-          Upload a previously exported CSV file. This will replace all existing data after confirmation.
-        </p>
         <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-          <input
-            type="file"
-            accept=".csv"
-            onChange={(e) => { setImportFile(e.target.files?.[0] ?? null); setImportReady(false); setImportErrors([]); }}
-            style={{ fontSize: 14 }}
-          />
-          <button onClick={handleImport} disabled={!importFile || loading} style={btnStyle('#3b82f6')}>
-            {loading ? 'Validating…' : 'Validate'}
-          </button>
-          {importReady && (
-            <button onClick={handleConfirm} disabled={loading} style={btnStyle('#f59e0b')}>
-              Confirm Import
-            </button>
+          <label style={uploadLabelStyle}>
+            📂 Choose File
+            <input
+              ref={fileRef}
+              type="file"
+              accept=".csv,.xlsx,.xls,.ods,.pdf,.png,.jpg,.jpeg,.webp"
+              onChange={handleFile}
+              style={{ display: 'none' }}
+            />
+          </label>
+          {fileName && <span style={{ fontSize: 13, color: '#475569' }}>{fileName}</span>}
+          {rows.length > 0 && (
+            <>
+              <button onClick={handleImport} disabled={importing} style={btnStyle('#22c55e')}>
+                {importing ? 'Importing…' : `⬆️ Import ${rows.length} row(s) to Investments`}
+              </button>
+              <button onClick={handleClear} style={btnStyle('#94a3b8')}>✕ Clear</button>
+            </>
           )}
         </div>
-        {importErrors.length > 0 && (
-          <div style={{ marginTop: 12 }}>
-            <p style={{ color: '#dc2626', fontWeight: 600, marginBottom: 8 }}>
-              ❌ {importErrors.length} validation error(s):
-            </p>
-            <table style={{ fontSize: 13, borderCollapse: 'collapse' }}>
+
+        {parseError && (
+          <div style={alertStyle('#fef2f2', '#dc2626', '#fecaca')}>
+            ❌ {parseError}
+          </div>
+        )}
+
+        {importMsg && (
+          <div style={alertStyle('#f0fdf4', '#166534', '#bbf7d0')}>
+            {importMsg}
+          </div>
+        )}
+      </div>
+
+      {/* ── Preview table ────────────────────────────────────────────────────── */}
+      {rows.length > 0 && (
+        <div style={{ ...cardStyle, marginTop: 16 }}>
+          <h3 style={{ marginBottom: 12 }}>Preview — {rows.length} row(s) detected</h3>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
               <thead>
-                <tr style={{ background: '#fef2f2' }}>
-                  <th style={thStyle}>Row</th>
-                  <th style={thStyle}>Field</th>
-                  <th style={thStyle}>Reason</th>
+                <tr style={{ background: '#f1f5f9' }}>
+                  {['Instrument', 'Qty', 'Avg. Cost', 'LTP', 'Invested', 'Cur. Val', 'P&L', 'Net Chg.', 'Day Chg.'].map((h) => (
+                    <th key={h} style={thStyle}>{h}</th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
-                {importErrors.map((err, i) => (
-                  <tr key={i} style={{ borderBottom: '1px solid #fecaca' }}>
-                    <td style={tdStyle}>{err.row}</td>
-                    <td style={tdStyle}>{err.field}</td>
-                    <td style={tdStyle}>{err.reason}</td>
+                {rows.map((r, i) => (
+                  <tr key={i} style={{ borderBottom: '1px solid #e2e8f0', background: i % 2 === 0 ? '#fff' : '#f8fafc' }}>
+                    <td style={{ ...tdStyle, fontWeight: 600 }}>{r.symbol}</td>
+                    <td style={tdStyle}>{r.qty}</td>
+                    <td style={tdStyle}>{r.avgCost.toFixed(2)}</td>
+                    <td style={tdStyle}>{r.ltp.toFixed(2)}</td>
+                    <td style={tdStyle}>{r.invested.toFixed(2)}</td>
+                    <td style={tdStyle}>{r.curVal.toFixed(2)}</td>
+                    <td style={{ ...tdStyle, color: r.pnl >= 0 ? '#16a34a' : '#dc2626', fontWeight: 600 }}>
+                      {r.pnl.toFixed(2)}
+                    </td>
+                    <td style={{ ...tdStyle, color: r.netChg >= 0 ? '#16a34a' : '#dc2626' }}>
+                      {r.netChg.toFixed(2)}
+                    </td>
+                    <td style={{ ...tdStyle, color: r.dayChg >= 0 ? '#16a34a' : '#dc2626' }}>
+                      {r.dayChg.toFixed(2)}
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-        )}
-      </div>
-
-      {/* Reset */}
-      <div style={{ ...cardStyle, marginTop: 16, border: '1px solid #fecaca' }}>
-        <h3 style={{ marginBottom: 8, color: '#dc2626' }}>Reset Data</h3>
-        <p style={{ color: '#64748b', fontSize: 14, marginBottom: 12 }}>
-          Reset all data to the pre-populated defaults (salary, car loan, fixed expenses). This cannot be undone.
-        </p>
-        <button onClick={handleReset} disabled={loading} style={btnStyle('#ef4444')}>
-          🗑️ Reset to Defaults
-        </button>
-      </div>
+        </div>
+      )}
     </div>
   );
 }
 
-const cardStyle: React.CSSProperties = { background: '#fff', borderRadius: 10, padding: 20, boxShadow: '0 1px 4px rgba(0,0,0,0.08)' };
-const btnStyle = (bg: string): React.CSSProperties => ({ background: bg, color: '#fff', border: 'none', borderRadius: 6, padding: '8px 16px', cursor: 'pointer', fontSize: 14 });
-const thStyle: React.CSSProperties = { padding: '6px 12px', textAlign: 'left', fontWeight: 600, color: '#475569' };
-const tdStyle: React.CSSProperties = { padding: '6px 12px', color: '#334155' };
+// ── Styles ────────────────────────────────────────────────────────────────────
+const cardStyle: React.CSSProperties = {
+  background: '#fff',
+  borderRadius: 10,
+  padding: 20,
+  boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
+};
+
+const uploadLabelStyle: React.CSSProperties = {
+  display: 'inline-block',
+  background: '#3b82f6',
+  color: '#fff',
+  border: 'none',
+  borderRadius: 6,
+  padding: '8px 16px',
+  cursor: 'pointer',
+  fontSize: 14,
+};
+
+const btnStyle = (bg: string): React.CSSProperties => ({
+  background: bg,
+  color: '#fff',
+  border: 'none',
+  borderRadius: 6,
+  padding: '8px 16px',
+  cursor: 'pointer',
+  fontSize: 14,
+});
+
+const alertStyle = (bg: string, color: string, border: string): React.CSSProperties => ({
+  marginTop: 12,
+  background: bg,
+  border: `1px solid ${border}`,
+  color,
+  borderRadius: 8,
+  padding: '10px 16px',
+  fontSize: 14,
+});
+
+const thStyle: React.CSSProperties = {
+  padding: '8px 12px',
+  textAlign: 'left',
+  fontWeight: 600,
+  color: '#475569',
+  whiteSpace: 'nowrap',
+};
+
+const tdStyle: React.CSSProperties = {
+  padding: '8px 12px',
+  color: '#334155',
+  whiteSpace: 'nowrap',
+};
