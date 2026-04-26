@@ -13,7 +13,20 @@ export const useLoans = () => {
 
       try {
         const res = await supabaseClient.get(`/loans?user_id=eq.${user.id}&order=id.desc`);
-        return res.data;
+        // Map snake_case DB fields → camelCase
+        return res.data.map((row: any) => ({
+          id: row.id,
+          loanName: row.loan_name,
+          loanType: row.loan_type || 'Other',
+          originalPrincipal: parseFloat(row.original_principal || 0),
+          outstandingPrincipal: parseFloat(row.outstanding_principal || 0),
+          emiAmount: parseFloat(row.emi_amount || 0),
+          interestRatePa: parseFloat(row.interest_rate_pa || 0),
+          emiStartDate: row.emi_start_date,
+          isClosed: row.is_closed || false,
+          remainingInstalments: row.remaining_instalments || 0,
+          estimatedClosureDate: row.estimated_closure_date || '',
+        }));
       } catch (error) {
         console.error('Loans error:', error);
         return [];
@@ -82,8 +95,17 @@ export const useAddLoan = () => {
         emi_start_date: data.emiStartDate,
         user_id: user.id,
       };
-      
-      return supabaseClient.post('/loans', payload);
+
+      // Try with loan_type; if 400 (column missing), retry without it
+      try {
+        return await supabaseClient.post('/loans', payload);
+      } catch (err: any) {
+        if (err?.response?.status === 400) {
+          const { loan_type, ...payloadWithoutType } = payload;
+          return supabaseClient.post('/loans', payloadWithoutType);
+        }
+        throw err;
+      }
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['loans'] }),
   });
@@ -100,6 +122,7 @@ export const useUpdateLoan = () => {
       // Convert camelCase to snake_case for database
       const payload: any = {};
       if (data.loanName) payload.loan_name = data.loanName;
+      // loan_type is optional — only send if column exists
       if ((data as any).loanType) payload.loan_type = (data as any).loanType;
       if (data.originalPrincipal !== undefined) payload.original_principal = data.originalPrincipal;
       if (data.outstandingPrincipal !== undefined) payload.outstanding_principal = data.outstandingPrincipal;
@@ -107,8 +130,17 @@ export const useUpdateLoan = () => {
       if (data.interestRatePa !== undefined) payload.interest_rate_pa = data.interestRatePa;
       if (data.emiStartDate) payload.emi_start_date = data.emiStartDate;
       if (data.isClosed !== undefined) payload.is_closed = data.isClosed;
-      
-      return supabaseClient.patch(`/loans?id=eq.${id}&user_id=eq.${user.id}`, payload);
+
+      // Try with loan_type first; if 400, retry without it
+      try {
+        return await supabaseClient.patch(`/loans?id=eq.${id}&user_id=eq.${user.id}`, payload);
+      } catch (err: any) {
+        if (err?.response?.status === 400 && payload.loan_type) {
+          delete payload.loan_type;
+          return supabaseClient.patch(`/loans?id=eq.${id}&user_id=eq.${user.id}`, payload);
+        }
+        throw err;
+      }
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['loans'] }),
   });
