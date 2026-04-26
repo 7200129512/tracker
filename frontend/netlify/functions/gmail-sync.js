@@ -69,25 +69,36 @@ async function fetchMessageBody(accessToken, messageId) {
 }
 
 function extractTextFromMessage(message) {
-  const parts = message.payload?.parts || [];
-  let text = '';
+  // Always include snippet — it's the most reliable for transaction details
+  const snippet = message.snippet || '';
 
-  // Try plain text first
-  for (const part of parts) {
-    if (part.mimeType === 'text/plain' && part.body?.data) {
-      text += Buffer.from(part.body.data, 'base64').toString('utf-8');
+  const parts = message.payload?.parts || [];
+  let text = snippet + ' ';
+
+  // Recursively extract all text parts (handles nested multipart)
+  function extractParts(partList) {
+    for (const part of partList) {
+      if (part.parts) extractParts(part.parts); // nested
+      if (part.body?.data) {
+        const decoded = Buffer.from(part.body.data, 'base64').toString('utf-8');
+        if (part.mimeType === 'text/plain') {
+          text += decoded + ' ';
+        } else if (part.mimeType === 'text/html') {
+          // Strip HTML tags to get plain text
+          text += decoded.replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ') + ' ';
+        }
+      }
     }
   }
 
-  // Fallback to body directly
-  if (!text && message.payload?.body?.data) {
-    text = Buffer.from(message.payload.body.data, 'base64').toString('utf-8');
+  if (parts.length > 0) {
+    extractParts(parts);
+  } else if (message.payload?.body?.data) {
+    const decoded = Buffer.from(message.payload.body.data, 'base64').toString('utf-8');
+    text += decoded.replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ');
   }
 
-  // Fallback to snippet
-  if (!text) text = message.snippet || '';
-
-  return text;
+  return text.trim();
 }
 
 function getEmailDate(message) {
@@ -114,10 +125,12 @@ function parseTransactionEmail(text, emailDate) {
     time: emailDate.toTimeString().split(' ')[0].substring(0, 8),
   };
 
-  // Extract amount — Rs., Rs, INR, ₹
+  // Extract amount — Rs., Rs, INR, ₹ — handles "Rs 1.00", "Rs.250.00", "INR 500"
   const amountPatterns = [
     /(?:Rs\.?\s*|INR\s*|₹\s*)(\d+(?:,\d+)*(?:\.\d+)?)/i,
     /(\d+(?:,\d+)*(?:\.\d+)?)\s*(?:Rs\.?|INR|₹)/i,
+    /debited.*?(\d+(?:,\d+)*(?:\.\d+)?)/i,
+    /credited.*?(\d+(?:,\d+)*(?:\.\d+)?)/i,
   ];
   for (const p of amountPatterns) {
     const m = text.match(p);
@@ -136,11 +149,11 @@ function parseTransactionEmail(text, emailDate) {
     result.type = 'credit';
   }
 
-  // Extract merchant
+  // Extract merchant — handles UPI VPA format too
   const merchantPatterns = [
+    /to\s+VPA\s+([A-Za-z0-9._@]+)/i,                                                                          // HDFC UPI: "to VPA vidhya.bluto@okhdfcbank"
     /(?:at|to|towards|merchant[:\s]+)\s*([A-Za-z0-9][A-Za-z0-9\s\-&'.,]+?)(?:\s+on\b|\s+dated|\s+\d|\s+via|\s+Ref|\s+UPI|\.|\n)/i,
     /(?:from)\s+([A-Za-z0-9][A-Za-z0-9\s\-&'.,]+?)(?:\s+on\b|\s+dated|\s+\d|\.|\n)/i,
-    /UPI[:\s]+([A-Za-z0-9][A-Za-z0-9\s\-&'.@]+?)(?:\s+on\b|\s+\d|\.|\n)/i,
   ];
   for (const p of merchantPatterns) {
     const m = text.match(p);
@@ -266,7 +279,7 @@ exports.handler = async (event) => {
 
     // Search Gmail for bank transaction emails (last 7 days)
     const since = Math.floor((Date.now() - 7 * 24 * 60 * 60 * 1000) / 1000);
-    const bankQuery = `(from:alerts@hdfcbank.net OR from:noreply@hdfcbank.com OR from:alerts@sbi.co.in OR from:icicibank.com OR from:axisbank.com OR from:kotakbank.com) after:${since}`;
+    const bankQuery = `(from:alerts@hdfcbank.net OR from:alerts@hdfcbank.bank.in OR from:noreply@hdfcbank.com OR from:hdfcbank.com OR from:alerts@sbi.co.in OR from:sbiintouch.com OR from:icicibank.com OR from:axisbank.com OR from:kotakbank.com OR from:yesbank.in) after:${since}`;
 
     const messages = await fetchGmailMessages(accessToken, bankQuery, 30);
 
