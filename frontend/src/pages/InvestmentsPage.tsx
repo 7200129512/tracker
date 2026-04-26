@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useHoldings, useClosedPositions, useAddHolding, useDeleteHolding } from '../api/investments';
 import type { InvestmentHolding } from '../types';
 import { formatINR, formatPct } from '../utils/format';
@@ -15,6 +15,30 @@ interface HoldingWithPriceError extends InvestmentHolding {
   priceError?: string;
 }
 
+// ── Computed row (adds derived fields for sorting) ────────────────────────────
+interface ComputedRow extends HoldingWithPriceError {
+  ltp: number;
+  invested: number;
+  curVal: number;
+  pnl: number;
+  pnlPct: number;
+}
+
+type SortKey = 'stockSymbol' | 'quantity' | 'purchasePrice' | 'ltp' | 'invested' | 'curVal' | 'pnl' | 'pnlPct';
+type SortDir = 'asc' | 'desc';
+
+const COLUMNS: { label: string; key: SortKey | null }[] = [
+  { label: 'Instrument', key: 'stockSymbol' },
+  { label: 'Qty',        key: 'quantity' },
+  { label: 'Avg. Cost',  key: 'purchasePrice' },
+  { label: 'LTP',        key: 'ltp' },
+  { label: 'Invested',   key: 'invested' },
+  { label: 'Cur. Val',   key: 'curVal' },
+  { label: 'P&L',        key: 'pnl' },
+  { label: 'P&L %',      key: 'pnlPct' },
+  { label: '',           key: null },   // Delete button column
+];
+
 export default function InvestmentsPage() {
   const { data: holdings = [], isLoading } = useHoldings();
   const { data: closed = [] } = useClosedPositions();
@@ -24,31 +48,24 @@ export default function InvestmentsPage() {
   const [error, setError] = useState('');
   const [holdingsWithPrices, setHoldingsWithPrices] = useState<HoldingWithPriceError[]>([]);
   const [loadingPrices, setLoadingPrices] = useState(false);
+  const [sortKey, setSortKey] = useState<SortKey>('stockSymbol');
+  const [sortDir, setSortDir] = useState<SortDir>('asc');
 
-  // Fetch real-time prices for all holdings
+  // ── Fetch live prices ───────────────────────────────────────────────────────
   useEffect(() => {
-    if (holdings.length === 0) {
-      setHoldingsWithPrices([]);
-      return;
-    }
-
+    if (holdings.length === 0) { setHoldingsWithPrices([]); return; }
     setLoadingPrices(true);
     const fetchPrices = async () => {
-      // Fetch all prices in parallel — Yahoo Finance handles concurrent requests fine
       const results = await Promise.all(
         holdings.map(async (holding) => {
           try {
-            const response = await fetch(
-              `/.netlify/functions/stock-price?symbol=${encodeURIComponent(holding.stockSymbol)}`
-            );
-            if (response.ok) {
-              const data = await response.json();
+            const res = await fetch(`/.netlify/functions/stock-price?symbol=${encodeURIComponent(holding.stockSymbol)}`);
+            if (res.ok) {
+              const data = await res.json();
               return { ...holding, currentPrice: data.price };
             }
-            console.warn(`Price fetch failed for ${holding.stockSymbol}: ${response.status}`);
             return { ...holding, priceError: 'unavailable' };
-          } catch (err) {
-            console.error(`Price fetch error for ${holding.stockSymbol}:`, err);
+          } catch {
             return { ...holding, priceError: 'unavailable' };
           }
         })
@@ -56,10 +73,48 @@ export default function InvestmentsPage() {
       setHoldingsWithPrices(results);
       setLoadingPrices(false);
     };
-
     fetchPrices();
   }, [holdings]);
 
+  // ── Compute derived fields + sort ───────────────────────────────────────────
+  const sortedRows = useMemo<ComputedRow[]>(() => {
+    const computed: ComputedRow[] = holdingsWithPrices.map((h) => {
+      const ltp = h.currentPrice || h.purchasePrice;
+      const invested = h.quantity * h.purchasePrice;
+      const curVal = h.quantity * ltp;
+      const pnl = curVal - invested;
+      const pnlPct = invested > 0 ? (pnl / invested) * 100 : 0;
+      return { ...h, ltp, invested, curVal, pnl, pnlPct };
+    });
+
+    return [...computed].sort((a, b) => {
+      const av = a[sortKey];
+      const bv = b[sortKey];
+      if (typeof av === 'string' && typeof bv === 'string') {
+        return sortDir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
+      }
+      const an = Number(av), bn = Number(bv);
+      return sortDir === 'asc' ? an - bn : bn - an;
+    });
+  }, [holdingsWithPrices, sortKey, sortDir]);
+
+  const handleSort = (key: SortKey | null) => {
+    if (!key) return;
+    if (key === sortKey) {
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortKey(key);
+      setSortDir('asc');
+    }
+  };
+
+  // ── Summary totals ──────────────────────────────────────────────────────────
+  const totalInvested    = sortedRows.reduce((s, h) => s + h.invested, 0);
+  const totalCurrentValue = sortedRows.reduce((s, h) => s + h.curVal, 0);
+  const totalGain        = totalCurrentValue - totalInvested;
+  const totalGainPct     = totalInvested > 0 ? (totalGain / totalInvested) * 100 : 0;
+
+  // ── Add holding ─────────────────────────────────────────────────────────────
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -71,64 +126,126 @@ export default function InvestmentsPage() {
     }
   };
 
-  const totalInvested = holdingsWithPrices.reduce((s, h) => s + h.quantity * h.purchasePrice, 0);
-  const totalCurrentValue = holdingsWithPrices.reduce((s, h) => s + h.quantity * (h.currentPrice || h.purchasePrice), 0);
-  const totalGain = totalCurrentValue - totalInvested;
-  const totalGainPct = totalInvested > 0 ? (totalGain / totalInvested) * 100 : 0;
-
   return (
     <div>
       <h2 style={{ marginBottom: 20, color: '#1e293b' }}>Investments</h2>
 
+      {/* ── Summary cards ─────────────────────────────────────────────────── */}
       <div style={{ display: 'flex', gap: 16, marginBottom: 16, flexWrap: 'wrap' }}>
-        <SummaryCard label="Total Invested" value={formatINR(totalInvested)} color="#3b82f6" />
-        <SummaryCard label="Current Value" value={formatINR(totalCurrentValue)} color="#8b5cf6" />
-        <SummaryCard 
-          label="Total Gain/Loss" 
-          value={`${formatINR(totalGain)} (${formatPct(totalGainPct)})`} 
-          color={totalGain >= 0 ? '#22c55e' : '#ef4444'} 
+        <SummaryCard label="Total Invested"   value={formatINR(totalInvested)}    color="#3b82f6" />
+        <SummaryCard label="Current Value"    value={formatINR(totalCurrentValue)} color="#8b5cf6" />
+        <SummaryCard
+          label="Total Gain/Loss"
+          value={`${formatINR(totalGain)} (${formatPct(totalGainPct)})`}
+          color={totalGain >= 0 ? '#22c55e' : '#ef4444'}
         />
       </div>
 
+      {/* ── Add Holding form ──────────────────────────────────────────────── */}
       <div style={cardStyle}>
         <h3 style={{ marginBottom: 12 }}>Add Holding</h3>
-        {error && <p style={{ color: 'red', marginBottom: 8 }}>{error}</p>}
-        <form onSubmit={handleAdd} style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          <input placeholder="Symbol" value={form.stockSymbol} onChange={(e) => setForm({ ...form, stockSymbol: e.target.value.toUpperCase() })} required style={inputStyle} />
-          <input placeholder="Stock Name" value={form.stockName} onChange={(e) => setForm({ ...form, stockName: e.target.value })} required style={inputStyle} />
-          <input type="number" placeholder="Quantity" value={form.quantity || ''} onChange={(e) => setForm({ ...form, quantity: Number(e.target.value) })} required min={0.0001} step={0.0001} style={{ ...inputStyle, width: 120 }} />
-          <input type="number" placeholder="Buy Price (₹)" value={form.purchasePrice || ''} onChange={(e) => setForm({ ...form, purchasePrice: Number(e.target.value) })} required min={0.01} step={0.01} style={{ ...inputStyle, width: 140 }} />
-          <input type="date" value={form.purchaseDate} onChange={(e) => setForm({ ...form, purchaseDate: e.target.value })} required style={inputStyle} />
-          <button type="submit" style={btnStyle('#22c55e')}>Add</button>
+        {error && <p style={{ color: '#dc2626', marginBottom: 8, fontSize: 13 }}>{error}</p>}
+        <form onSubmit={handleAdd} style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+          <div style={fieldGroup}>
+            <label style={labelStyle}>Symbol</label>
+            <input
+              placeholder="e.g. RELIANCE"
+              value={form.stockSymbol}
+              onChange={(e) => setForm({ ...form, stockSymbol: e.target.value.toUpperCase(), stockName: e.target.value.toUpperCase() })}
+              required
+              style={inputStyle}
+            />
+          </div>
+          <div style={fieldGroup}>
+            <label style={labelStyle}>Quantity</label>
+            <input
+              type="number"
+              placeholder="e.g. 10"
+              value={form.quantity || ''}
+              onChange={(e) => setForm({ ...form, quantity: Number(e.target.value) })}
+              required
+              min={0.0001}
+              step={0.0001}
+              style={{ ...inputStyle, width: 110 }}
+            />
+          </div>
+          <div style={fieldGroup}>
+            <label style={labelStyle}>Avg. Cost (₹)</label>
+            <input
+              type="number"
+              placeholder="e.g. 2450.50"
+              value={form.purchasePrice || ''}
+              onChange={(e) => setForm({ ...form, purchasePrice: Number(e.target.value) })}
+              required
+              min={0.01}
+              step={0.01}
+              style={{ ...inputStyle, width: 140 }}
+            />
+          </div>
+          <div style={fieldGroup}>
+            <label style={labelStyle}>Buy Date</label>
+            <input
+              type="date"
+              value={form.purchaseDate}
+              onChange={(e) => setForm({ ...form, purchaseDate: e.target.value })}
+              required
+              style={inputStyle}
+            />
+          </div>
+          <button type="submit" disabled={addHolding.isPending} style={{ ...btnStyle('#22c55e'), alignSelf: 'flex-end', marginBottom: 1 }}>
+            {addHolding.isPending ? 'Adding…' : '+ Add'}
+          </button>
         </form>
       </div>
 
+      {/* ── Active Holdings grid ──────────────────────────────────────────── */}
       <div style={{ ...cardStyle, marginTop: 16 }}>
         <h3 style={{ marginBottom: 12 }}>
           Active Holdings{' '}
-          {loadingPrices && <span style={{ fontSize: 12, color: '#94a3b8' }}>(updating prices…)</span>}
+          <span style={{ fontSize: 12, color: '#94a3b8', fontWeight: 400 }}>
+            ({sortedRows.length} stocks)
+          </span>
+          {loadingPrices && (
+            <span style={{ fontSize: 12, color: '#94a3b8', fontWeight: 400, marginLeft: 8 }}>
+              · updating prices…
+            </span>
+          )}
         </h3>
-        {isLoading ? <p>Loading…</p> : holdingsWithPrices.length === 0 ? (
-          <p style={{ color: '#94a3b8' }}>No holdings yet. Import from the Data Management page.</p>
+
+        {isLoading ? (
+          <p style={{ color: '#94a3b8' }}>Loading…</p>
+        ) : sortedRows.length === 0 ? (
+          <p style={{ color: '#94a3b8' }}>No holdings yet. Import from the Data page or add one above.</p>
         ) : (
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
               <thead>
                 <tr style={{ background: '#f1f5f9' }}>
-                  {['Instrument', 'Qty', 'Avg. Cost', 'LTP', 'Invested', 'Cur. Val', 'P&L', 'P&L %', ''].map((h) => (
-                    <th key={h} style={thStyle}>{h}</th>
+                  {COLUMNS.map((col) => (
+                    <th
+                      key={col.label}
+                      onClick={() => handleSort(col.key)}
+                      style={{
+                        ...thStyle,
+                        cursor: col.key ? 'pointer' : 'default',
+                        userSelect: 'none',
+                        whiteSpace: 'nowrap',
+                        background: col.key === sortKey ? '#e2e8f0' : undefined,
+                      }}
+                    >
+                      {col.label}
+                      {col.key === sortKey && (
+                        <span style={{ marginLeft: 4, fontSize: 10 }}>
+                          {sortDir === 'asc' ? '▲' : '▼'}
+                        </span>
+                      )}
+                    </th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {holdingsWithPrices.map((h, idx) => {
-                  const ltp = h.currentPrice || h.purchasePrice;
-                  const invested = h.quantity * h.purchasePrice;
-                  const curVal = h.quantity * ltp;
-                  const pnl = curVal - invested;
-                  const pnlPct = invested > 0 ? (pnl / invested) * 100 : 0;
-                  const isGain = pnl >= 0;
-
+                {sortedRows.map((h, idx) => {
+                  const isGain = h.pnl >= 0;
                   return (
                     <tr
                       key={h.id}
@@ -138,25 +255,30 @@ export default function InvestmentsPage() {
                       }}
                     >
                       <td style={{ ...tdStyle, fontWeight: 600 }}>{h.stockSymbol}</td>
-                      <td style={tdStyle}>{Number(h.quantity).toLocaleString('en-IN')}</td>
-                      <td style={tdStyle}>{formatINR(h.purchasePrice)}</td>
-                      <td style={tdStyle}>
-                        {(h as HoldingWithPriceError).priceError ? (
-                          <span style={{ color: '#ef4444', fontSize: 11 }}>—</span>
+                      <td style={{ ...tdStyle, textAlign: 'right' }}>
+                        {Number(h.quantity).toLocaleString('en-IN')}
+                      </td>
+                      <td style={{ ...tdStyle, textAlign: 'right' }}>{formatINR(h.purchasePrice)}</td>
+                      <td style={{ ...tdStyle, textAlign: 'right' }}>
+                        {h.priceError ? (
+                          <span style={{ color: '#94a3b8', fontSize: 11 }}>—</span>
                         ) : (
-                          formatINR(ltp)
+                          formatINR(h.ltp)
                         )}
                       </td>
-                      <td style={tdStyle}>{formatINR(invested)}</td>
-                      <td style={tdStyle}>{formatINR(curVal)}</td>
-                      <td style={{ ...tdStyle, color: isGain ? '#16a34a' : '#dc2626', fontWeight: 600 }}>
-                        {formatINR(pnl)}
+                      <td style={{ ...tdStyle, textAlign: 'right' }}>{formatINR(h.invested)}</td>
+                      <td style={{ ...tdStyle, textAlign: 'right' }}>{formatINR(h.curVal)}</td>
+                      <td style={{ ...tdStyle, textAlign: 'right', color: isGain ? '#16a34a' : '#dc2626', fontWeight: 600 }}>
+                        {formatINR(h.pnl)}
                       </td>
-                      <td style={{ ...tdStyle, color: isGain ? '#16a34a' : '#dc2626' }}>
-                        {formatPct(pnlPct)}
+                      <td style={{ ...tdStyle, textAlign: 'right', color: isGain ? '#16a34a' : '#dc2626' }}>
+                        {formatPct(h.pnlPct)}
                       </td>
-                      <td style={tdStyle}>
-                        <button onClick={() => deleteHolding.mutate(h.id)} style={smallBtn('#ef4444')}>
+                      <td style={{ ...tdStyle, textAlign: 'center' }}>
+                        <button
+                          onClick={() => deleteHolding.mutate(h.id)}
+                          style={smallBtn('#ef4444')}
+                        >
                           Delete
                         </button>
                       </td>
@@ -164,18 +286,40 @@ export default function InvestmentsPage() {
                   );
                 })}
               </tbody>
+
+              {/* Totals row */}
+              <tfoot>
+                <tr style={{ background: '#f1f5f9', fontWeight: 700, borderTop: '2px solid #cbd5e1' }}>
+                  <td style={{ ...tdStyle, fontWeight: 700 }}>Total</td>
+                  <td style={tdStyle} />
+                  <td style={tdStyle} />
+                  <td style={tdStyle} />
+                  <td style={{ ...tdStyle, textAlign: 'right', fontWeight: 700 }}>{formatINR(totalInvested)}</td>
+                  <td style={{ ...tdStyle, textAlign: 'right', fontWeight: 700 }}>{formatINR(totalCurrentValue)}</td>
+                  <td style={{ ...tdStyle, textAlign: 'right', fontWeight: 700, color: totalGain >= 0 ? '#16a34a' : '#dc2626' }}>
+                    {formatINR(totalGain)}
+                  </td>
+                  <td style={{ ...tdStyle, textAlign: 'right', fontWeight: 700, color: totalGain >= 0 ? '#16a34a' : '#dc2626' }}>
+                    {formatPct(totalGainPct)}
+                  </td>
+                  <td style={tdStyle} />
+                </tr>
+              </tfoot>
             </table>
           </div>
         )}
       </div>
 
+      {/* ── Closed Positions ──────────────────────────────────────────────── */}
       {closed.length > 0 && (
         <div style={{ ...cardStyle, marginTop: 16 }}>
           <h3 style={{ marginBottom: 12 }}>Closed Positions</h3>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
             <thead>
               <tr style={{ background: '#f1f5f9' }}>
-                {['Symbol', 'Name', 'Buy Price'].map((h) => <th key={h} style={thStyle}>{h}</th>)}
+                {['Symbol', 'Name', 'Buy Price'].map((h) => (
+                  <th key={h} style={thStyle}>{h}</th>
+                ))}
               </tr>
             </thead>
             <tbody>
@@ -194,18 +338,44 @@ export default function InvestmentsPage() {
   );
 }
 
+// ── Sub-components ────────────────────────────────────────────────────────────
 function SummaryCard({ label, value, color }: { label: string; value: string; color: string }) {
   return (
-    <div style={{ background: '#fff', borderRadius: 10, padding: '14px 18px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', borderLeft: `4px solid ${color}`, minWidth: 160 }}>
+    <div style={{
+      background: '#fff', borderRadius: 10, padding: '14px 18px',
+      boxShadow: '0 1px 4px rgba(0,0,0,0.08)', borderLeft: `4px solid ${color}`, minWidth: 160,
+    }}>
       <div style={{ fontSize: 12, color: '#64748b', marginBottom: 4 }}>{label}</div>
       <div style={{ fontSize: 16, fontWeight: 700, color: '#1e293b' }}>{value}</div>
     </div>
   );
 }
 
-const cardStyle: React.CSSProperties = { background: '#fff', borderRadius: 10, padding: 20, boxShadow: '0 1px 4px rgba(0,0,0,0.08)' };
-const inputStyle: React.CSSProperties = { padding: '8px 12px', border: '1px solid #e2e8f0', borderRadius: 6, fontSize: 14, minWidth: 130 };
-const btnStyle = (bg: string): React.CSSProperties => ({ background: bg, color: '#fff', border: 'none', borderRadius: 6, padding: '8px 16px', cursor: 'pointer', fontSize: 14 });
-const smallBtn = (bg: string): React.CSSProperties => ({ background: bg, color: '#fff', border: 'none', borderRadius: 4, padding: '4px 10px', cursor: 'pointer', fontSize: 12, marginRight: 4 });
-const thStyle: React.CSSProperties = { padding: '8px 12px', textAlign: 'left', fontWeight: 600, color: '#475569' };
-const tdStyle: React.CSSProperties = { padding: '8px 12px', color: '#334155' };
+// ── Styles ────────────────────────────────────────────────────────────────────
+const cardStyle: React.CSSProperties = {
+  background: '#fff', borderRadius: 10, padding: 20,
+  boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
+};
+const fieldGroup: React.CSSProperties = {
+  display: 'flex', flexDirection: 'column', gap: 4,
+};
+const labelStyle: React.CSSProperties = {
+  fontSize: 11, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em',
+};
+const inputStyle: React.CSSProperties = {
+  padding: '8px 12px', border: '1px solid #e2e8f0', borderRadius: 6, fontSize: 14, minWidth: 130,
+};
+const btnStyle = (bg: string): React.CSSProperties => ({
+  background: bg, color: '#fff', border: 'none', borderRadius: 6,
+  padding: '8px 18px', cursor: 'pointer', fontSize: 14, fontWeight: 600,
+});
+const smallBtn = (bg: string): React.CSSProperties => ({
+  background: bg, color: '#fff', border: 'none', borderRadius: 4,
+  padding: '4px 10px', cursor: 'pointer', fontSize: 12,
+});
+const thStyle: React.CSSProperties = {
+  padding: '8px 12px', textAlign: 'left', fontWeight: 600, color: '#475569',
+};
+const tdStyle: React.CSSProperties = {
+  padding: '8px 12px', color: '#334155',
+};
