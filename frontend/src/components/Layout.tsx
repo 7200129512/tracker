@@ -5,14 +5,14 @@ import { signOut } from '../api/auth';
 import { currentMonth, formatMonth } from '../utils/format';
 
 const navItems = [
-  { to: '/', label: '📊 Dashboard', end: true },
-  { to: '/expenses', label: '🧾 Expenses' },
-  { to: '/daily-expense', label: '💸 Daily Expense' },
-  { to: '/loans', label: '🏦 Loans' },
-  { to: '/investments', label: '📈 Investments' },
-  { to: '/savings', label: '🏧 Savings' },
-  { to: '/settings', label: '⚙️ Settings' },
-  { to: '/data', label: '📋 Data' },
+  { to: '/', label: 'Dashboard', icon: '▦', end: true },
+  { to: '/expenses', label: 'Expenses', icon: '◈' },
+  { to: '/daily-expense', label: 'Daily Expense', icon: '✦' },
+  { to: '/loans', label: 'Loans', icon: '⊞' },
+  { to: '/investments', label: 'Investments', icon: '◱' },
+  { to: '/savings', label: 'Savings', icon: '▣' },
+  { to: '/settings', label: 'Settings', icon: '⚙' },
+  { to: '/data', label: 'Data', icon: '▤' },
 ];
 
 export default function Layout() {
@@ -84,7 +84,9 @@ export default function Layout() {
               end={item.end}
               onClick={() => isMobile && setSidebarOpen(false)}
               style={({ isActive }) => ({
-                display: 'block',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
                 padding: isMobile ? '12px 16px' : '10px 20px',
                 color: isActive ? '#38bdf8' : '#cbd5e1',
                 background: isActive ? '#0f172a' : 'transparent',
@@ -94,7 +96,8 @@ export default function Layout() {
                 borderLeft: isActive ? '3px solid #38bdf8' : '3px solid transparent',
               })}
             >
-              {item.label}
+              <span style={{ fontSize: 16, width: 20, textAlign: 'center', flexShrink: 0 }}>{item.icon}</span>
+              <span>{item.label}</span>
             </NavLink>
           ))}
         </nav>
