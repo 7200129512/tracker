@@ -95,26 +95,31 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Row 4 — Portfolio summary (live prices) */}
+      {/* Investment Breakdown */}
       {(() => {
         const invested  = portfolio?.investedValue  ?? summary?.portfolioInvestedValue ?? 0;
         const current   = portfolio?.currentValue   ?? summary?.portfolioCurrentValue  ?? 0;
         const gain      = portfolio?.gainLoss       ?? 0;
         const gainPct   = portfolio?.gainLossPct    ?? 0;
         return (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 24 }}>
-            <Card label="Total Invested" value={formatINR(invested)} color="#3b82f6" />
-            <Card
-              label={`Current Value${portfolioLoading ? ' (updating…)' : ''}`}
-              value={formatINR(current)}
-              color="#8b5cf6"
-            />
-            <Card
-              label="Total Gain/Loss"
-              value={`${formatINR(gain)} (${gainPct.toFixed(2)}%)`}
-              color={gain >= 0 ? '#22c55e' : '#ef4444'}
-              highlight={gain < 0}
-            />
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: '#64748b', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Investment Breakdown
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 12 }}>
+              <div style={{ background: '#fff', borderRadius: 10, padding: '14px 16px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', borderLeft: '4px solid #3b82f6' }}>
+                <div style={{ fontSize: 12, color: '#64748b', marginBottom: 2 }}>Total Invested</div>
+                <div style={{ fontSize: 18, fontWeight: 700, color: '#1e293b' }}>{formatINR(invested)}</div>
+              </div>
+              <div style={{ background: '#fff', borderRadius: 10, padding: '14px 16px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', borderLeft: '4px solid #8b5cf6' }}>
+                <div style={{ fontSize: 12, color: '#64748b', marginBottom: 2 }}>Current Value{portfolioLoading ? ' (updating…)' : ''}</div>
+                <div style={{ fontSize: 18, fontWeight: 700, color: '#1e293b' }}>{formatINR(current)}</div>
+              </div>
+              <div style={{ background: '#fff', borderRadius: 10, padding: '14px 16px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', borderLeft: `4px solid ${gain >= 0 ? '#22c55e' : '#ef4444'}` }}>
+                <div style={{ fontSize: 12, color: '#64748b', marginBottom: 2 }}>Total Gain/Loss</div>
+                <div style={{ fontSize: 18, fontWeight: 700, color: gain >= 0 ? '#22c55e' : '#ef4444' }}>{formatINR(gain)} ({gainPct.toFixed(2)}%)</div>
+              </div>
+            </div>
           </div>
         );
       })()}
