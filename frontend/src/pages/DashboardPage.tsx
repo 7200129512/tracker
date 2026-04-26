@@ -84,8 +84,8 @@ export default function DashboardPage() {
                 return (
                   <div key={loan.id}>
                     <div style={{ fontSize: 14, fontWeight: 700, color: '#1e293b', marginBottom: 2 }}>{loan.loanName}</div>
-                    <div style={{ fontSize: 12, color: '#64748b' }}>{formatINR(loan.outstandingPrincipal)}</div>
-                    <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>EMI: {formatINR(loan.emiAmount)} · ~{remainingMonths}m</div>
+                    <div style={{ fontSize: 18, fontWeight: 700, color: '#1e293b' }}>{formatINR(loan.outstandingPrincipal)}</div>
+                    <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>EMI: <span style={{ fontWeight: 700 }}>{formatINR(loan.emiAmount)}</span> · ~{remainingMonths}m</div>
                   </div>
                 );
               })}
