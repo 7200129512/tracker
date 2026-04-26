@@ -44,14 +44,13 @@ export default function DashboardPage() {
       )}
 
       {/* Row 1 — Daily bank tracking + Income */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16, marginBottom: 16 }}>
         <Card label="Daily Spend & Receive" value={`${formatINR(dailyExp?.todayTotal ?? 0)} / ${formatINR(dailyExp?.todayCredit ?? 0)}`} color="#f97316" />
         <IncomeCard 
           salary={formatINR(summary?.totalIncome ?? 0)}
           pf={formatINR(summary?.pfAmount ?? 0)}
           variablePay={formatINR(summary?.variablePayAmount ?? 0)}
         />
-        <Card label="Monthly Surplus" value={formatINR(surplus)} color={surplus < 0 ? '#ef4444' : '#3b82f6'} highlight={surplus < 0} />
       </div>
 
       {/* Row 2 — Monthly totals, Surplus/Expenses, and Investments */}
