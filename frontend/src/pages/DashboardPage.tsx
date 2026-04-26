@@ -66,14 +66,24 @@ export default function DashboardPage() {
       {/* Daily Expense cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
         <Card
-          label={`Daily Expenses (${todayLabel})`}
+          label={`Daily Spent (${todayLabel})`}
           value={formatINR(dailyExp?.todayTotal ?? 0)}
           color="#f97316"
         />
         <Card
-          label={`Monthly Daily Expenses (${formatMonth(month)})`}
+          label={`Monthly Spent (${formatMonth(month)})`}
           value={formatINR(dailyExp?.monthTotal ?? 0)}
           color="#dc2626"
+        />
+        <Card
+          label={`Daily Received (${todayLabel})`}
+          value={formatINR(dailyExp?.todayCredit ?? 0)}
+          color="#22c55e"
+        />
+        <Card
+          label={`Monthly Received (${formatMonth(month)})`}
+          value={formatINR(dailyExp?.monthCredit ?? 0)}
+          color="#16a34a"
         />
       </div>
 

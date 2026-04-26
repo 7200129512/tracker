@@ -136,34 +136,28 @@ export const useMonthlyDailyExpenses = () => {
   const firstOfMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-01`;
   const todayStr = today.toISOString().split('T')[0];
 
-  return useQuery<{ monthTotal: number; todayTotal: number }>({
+  return useQuery<{ monthTotal: number; todayTotal: number; monthCredit: number; todayCredit: number }>({
     queryKey: ['daily-expenses', 'summary', user?.id, todayStr],
     queryFn: async () => {
       if (!user?.id) throw new Error('User not authenticated');
       const { supabase } = await import('./auth');
 
-      // Monthly total (debit only)
+      // Fetch all transactions for this month in one query
       const { data: monthData } = await supabase
         .from('daily_transactions')
-        .select('amount, type')
+        .select('amount, type, date')
         .eq('user_id', user.id)
-        .eq('type', 'debit')
         .gte('date', firstOfMonth)
         .lte('date', todayStr);
 
-      const monthTotal = (monthData || []).reduce((sum, r) => sum + Number(r.amount), 0);
+      const rows = monthData || [];
 
-      // Today total (debit only)
-      const { data: todayData } = await supabase
-        .from('daily_transactions')
-        .select('amount, type')
-        .eq('user_id', user.id)
-        .eq('type', 'debit')
-        .eq('date', todayStr);
+      const monthTotal  = rows.filter(r => r.type === 'debit').reduce((s, r) => s + Number(r.amount), 0);
+      const monthCredit = rows.filter(r => r.type === 'credit').reduce((s, r) => s + Number(r.amount), 0);
+      const todayTotal  = rows.filter(r => r.type === 'debit'  && r.date === todayStr).reduce((s, r) => s + Number(r.amount), 0);
+      const todayCredit = rows.filter(r => r.type === 'credit' && r.date === todayStr).reduce((s, r) => s + Number(r.amount), 0);
 
-      const todayTotal = (todayData || []).reduce((sum, r) => sum + Number(r.amount), 0);
-
-      return { monthTotal, todayTotal };
+      return { monthTotal, todayTotal, monthCredit, todayCredit };
     },
     enabled: !!user?.id,
     refetchInterval: 60000,
