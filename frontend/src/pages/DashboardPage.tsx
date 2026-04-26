@@ -22,7 +22,7 @@ export default function DashboardPage() {
     <div>
       <h2 style={{ marginBottom: 20, color: '#1e293b' }}>Dashboard — {formatMonth(month)}</h2>
 
-      {/* Alerts */}
+      {/* Alerts — budget and low surplus only, no EMI reminder */}
       {alerts && (
         <div style={{ marginBottom: 16 }}>
           {alerts.budgetAlert && (
@@ -33,11 +33,6 @@ export default function DashboardPage() {
           {alerts.lowSurplusAlert && (
             <div style={alertStyle('red')}>
               🔴 Low Surplus: Monthly surplus is below ₹5,000.
-            </div>
-          )}
-          {alerts.emiReminder && (
-            <div style={alertStyle('blue')}>
-              🔔 EMI Reminder: {alerts.emiReminderLoanName || 'A loan'} payment is due within 5 days.
             </div>
           )}
         </div>

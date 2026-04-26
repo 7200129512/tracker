@@ -1,6 +1,5 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
-import { useRefreshPrices } from '../api/investments';
 import { useAuth } from '../context/AuthContext';
 import { signOut } from '../api/auth';
 import { currentMonth, formatMonth } from '../utils/format';
@@ -18,7 +17,6 @@ const navItems = [
 ];
 
 export default function Layout() {
-  const refresh = useRefreshPrices();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -145,21 +143,6 @@ export default function Layout() {
           <span style={{ fontSize: isMobile ? 13 : 14, color: '#64748b' }}>
             📅 {formatMonth(currentMonth())}
           </span>
-          <button
-            onClick={() => refresh.mutate()}
-            disabled={refresh.isPending}
-            style={{
-              background: '#0ea5e9',
-              color: '#fff',
-              border: 'none',
-              borderRadius: 6,
-              padding: isMobile ? '6px 10px' : '6px 14px',
-              fontSize: isMobile ? 12 : 13,
-              cursor: 'pointer',
-            }}
-          >
-            {refresh.isPending ? 'Refreshing…' : '🔄 Refresh Prices'}
-          </button>
         </header>
 
         {/* Page content */}
