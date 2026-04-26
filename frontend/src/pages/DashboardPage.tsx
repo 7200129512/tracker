@@ -75,13 +75,13 @@ export default function DashboardPage() {
                 tick={{ fontSize: 11 }}
                 label={{ value: 'Day of Month', position: 'insideBottom', offset: -12, fontSize: 11, fill: '#94a3b8' }}
               />
-              {/* Left Y-axis for spent (smaller amounts) */}
+              {/* Left Y-axis for spent (smaller amounts in ₹) */}
               <YAxis
                 yAxisId="spent"
                 orientation="left"
-                tickFormatter={(v) => v === 0 ? '₹0' : `₹${(v / 1000).toFixed(0)}k`}
-                tick={{ fontSize: 11, fill: '#ef4444' }}
-                width={52}
+                tickFormatter={(v) => v === 0 ? '₹0' : `₹${v.toLocaleString('en-IN')}`}
+                tick={{ fontSize: 10, fill: '#ef4444' }}
+                width={58}
                 domain={[0, 'auto']}
                 tickCount={6}
                 allowDecimals={false}
