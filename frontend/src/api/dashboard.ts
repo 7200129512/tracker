@@ -65,35 +65,15 @@ export const useDashboardSummary = (month: string) => {
           .filter((r: any) => r.type === 'debit')
           .reduce((sum: number, r: any) => sum + Number(r.amount), 0);
 
-        // Fetch investments — use price_cache for current value if available
+        // Fetch investments — portfolio invested value only (live prices fetched separately)
         const investRes = await supabaseClient.get(
           `/investment_holdings?user_id=eq.${user.id}&is_closed=eq.false&select=quantity,purchase_price,stock_symbol`
         );
         const portfolioInvestedValue = investRes.data.reduce(
           (sum: number, row: any) => sum + (parseFloat(row.quantity || 0) * parseFloat(row.purchase_price || 0)), 0
         );
-
-        // Try to get current prices from price_cache for portfolio current value
-        let portfolioCurrentValue = portfolioInvestedValue; // fallback = invested
-        try {
-          const symbols = investRes.data.map((r: any) => r.stock_symbol).filter(Boolean);
-          if (symbols.length > 0) {
-            const priceRes = await supabaseClient.get(
-              `/price_cache?symbol=in.(${symbols.map((s: string) => `"${s}"`).join(',')})&select=symbol,current_price`
-            );
-            const priceMap: Record<string, number> = {};
-            (priceRes.data || []).forEach((p: any) => {
-              if (p.current_price) priceMap[p.symbol] = parseFloat(p.current_price);
-            });
-            portfolioCurrentValue = investRes.data.reduce((sum: number, row: any) => {
-              const qty = parseFloat(row.quantity || 0);
-              const ltp = priceMap[row.stock_symbol] || parseFloat(row.purchase_price || 0);
-              return sum + qty * ltp;
-            }, 0);
-          }
-        } catch {
-          // price_cache unavailable — use invested value
-        }
+        // Current value will be calculated on dashboard using cached prices from Investments page
+        const portfolioCurrentValue = portfolioInvestedValue;
 
         // Fetch savings for current user ONLY
         const savingsRes = await supabaseClient.get(`/savings_transactions?user_id=eq.${user.id}&select=type,amount`);
@@ -298,5 +278,63 @@ export const useDashboardAlerts = (month: string) => {
     },
     refetchInterval: 30000,
     enabled: !!user?.id,
+  });
+};
+
+// ── Live portfolio value hook ─────────────────────────────────────────────────
+// Fetches live prices for all holdings and returns current value + gain/loss.
+// Called separately from dashboard so it doesn't slow down the main load.
+export const usePortfolioLiveValue = () => {
+  const { user } = useAuth();
+
+  return useQuery<{ currentValue: number; investedValue: number; gainLoss: number; gainLossPct: number }>({
+    queryKey: ['portfolio', 'live-value', user?.id],
+    queryFn: async () => {
+      if (!user?.id) throw new Error('Not authenticated');
+
+      // Get all holdings
+      const res = await supabaseClient.get(
+        `/investment_holdings?user_id=eq.${user.id}&is_closed=eq.false&select=quantity,purchase_price,stock_symbol`
+      );
+      const holdings: { quantity: string; purchase_price: string; stock_symbol: string }[] = res.data || [];
+      if (holdings.length === 0) return { currentValue: 0, investedValue: 0, gainLoss: 0, gainLossPct: 0 };
+
+      const investedValue = holdings.reduce(
+        (s, h) => s + parseFloat(h.quantity) * parseFloat(h.purchase_price), 0
+      );
+
+      // Fetch all prices in parallel
+      const priceResults = await Promise.all(
+        holdings.map(async (h) => {
+          try {
+            const r = await fetch(`/.netlify/functions/stock-price?symbol=${encodeURIComponent(h.stock_symbol)}`);
+            if (r.ok) { const d = await r.json(); return { symbol: h.stock_symbol, price: d.price as number }; }
+          } catch { /* ignore */ }
+          return { symbol: h.stock_symbol, price: null as number | null };
+        })
+      );
+
+      const priceMap: Record<string, number> = {};
+      priceResults.forEach((r) => { if (r.price) priceMap[r.symbol] = r.price; });
+
+      const currentValue = holdings.reduce((s, h) => {
+        const qty = parseFloat(h.quantity);
+        const ltp = priceMap[h.stock_symbol] ?? parseFloat(h.purchase_price);
+        return s + qty * ltp;
+      }, 0);
+
+      const gainLoss = currentValue - investedValue;
+      const gainLossPct = investedValue > 0 ? (gainLoss / investedValue) * 100 : 0;
+
+      return {
+        currentValue: parseFloat(currentValue.toFixed(2)),
+        investedValue: parseFloat(investedValue.toFixed(2)),
+        gainLoss: parseFloat(gainLoss.toFixed(2)),
+        gainLossPct: parseFloat(gainLossPct.toFixed(2)),
+      };
+    },
+    enabled: !!user?.id,
+    staleTime: 5 * 60 * 1000,   // cache for 5 min — prices don't change every second
+    refetchInterval: 5 * 60 * 1000,
   });
 };

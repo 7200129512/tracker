@@ -1,7 +1,7 @@
 import {
   LineChart, Line, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, CartesianGrid,
 } from 'recharts';
-import { useDashboardSummary, useDashboardAlerts, useMonthlyDailyExpenses, useDailyChart } from '../api/dashboard';
+import { useDashboardSummary, useDashboardAlerts, useMonthlyDailyExpenses, useDailyChart, usePortfolioLiveValue } from '../api/dashboard';
 import { formatINR, currentMonth, formatMonth } from '../utils/format';
 
 export default function DashboardPage() {
@@ -10,6 +10,7 @@ export default function DashboardPage() {
   const { data: alerts } = useDashboardAlerts(month);
   const { data: dailyExp } = useMonthlyDailyExpenses();
   const { data: dailyChart } = useDailyChart();
+  const { data: portfolio, isLoading: portfolioLoading } = usePortfolioLiveValue();
 
   const today = new Date();
   const todayLabel = today.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
@@ -63,16 +64,20 @@ export default function DashboardPage() {
         <Card label="Loan Outstanding" value={formatINR(summary?.outstandingLoanPrincipal ?? 0)} color="#be123c" />
       </div>
 
-      {/* Row 4 — Portfolio summary */}
+      {/* Row 4 — Portfolio summary (live prices) */}
       {(() => {
-        const invested = summary?.portfolioInvestedValue ?? 0;
-        const current  = summary?.portfolioCurrentValue ?? 0;
-        const gain     = current - invested;
-        const gainPct  = invested > 0 ? (gain / invested) * 100 : 0;
+        const invested  = portfolio?.investedValue  ?? summary?.portfolioInvestedValue ?? 0;
+        const current   = portfolio?.currentValue   ?? summary?.portfolioCurrentValue  ?? 0;
+        const gain      = portfolio?.gainLoss       ?? 0;
+        const gainPct   = portfolio?.gainLossPct    ?? 0;
         return (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 24 }}>
             <Card label="Total Invested" value={formatINR(invested)} color="#3b82f6" />
-            <Card label="Current Value"  value={formatINR(current)}  color="#8b5cf6" />
+            <Card
+              label={`Current Value${portfolioLoading ? ' (updating…)' : ''}`}
+              value={formatINR(current)}
+              color="#8b5cf6"
+            />
             <Card
               label="Total Gain/Loss"
               value={`${formatINR(gain)} (${gainPct.toFixed(2)}%)`}
