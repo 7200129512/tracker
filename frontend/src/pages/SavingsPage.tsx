@@ -3,7 +3,6 @@ import {
   useSavingsTransactions, useSavingsBalance,
   useAddTransaction, useUpdateTransaction, useDeleteTransaction,
 } from '../api/savings';
-import { useAuth } from '../context/AuthContext';
 import type { SavingsTransaction } from '../types';
 import { formatINR } from '../utils/format';
 
@@ -15,7 +14,6 @@ const EMPTY: Omit<SavingsTransaction, 'id'> = {
 };
 
 export default function SavingsPage() {
-  const { user } = useAuth();
   const { data: transactions = [], isLoading } = useSavingsTransactions();
   const { data: balanceData } = useSavingsBalance();
   const addTx = useAddTransaction();
@@ -28,44 +26,6 @@ export default function SavingsPage() {
   const [rangeFrom, setRangeFrom] = useState('');
   const [rangeTo, setRangeTo] = useState('');
   const { data: rangeData } = useSavingsBalance(rangeFrom || undefined, rangeTo || undefined);
-
-  // Bank balance from Gmail
-  const [bankBalance, setBankBalance] = useState<number | null>(null);
-  const [bankBalanceDate, setBankBalanceDate] = useState('');
-  const [bankBalanceSnippet, setBankBalanceSnippet] = useState('');
-  const [fetchingBalance, setFetchingBalance] = useState(false);
-  const [fetchError, setFetchError] = useState('');
-
-  const handleFetchBankBalance = async () => {
-    if (!user?.id) return;
-    setFetchingBalance(true);
-    setFetchError('');
-    setBankBalance(null);
-
-    try {
-      const res = await fetch('/.netlify/functions/bank-balance', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_id: user.id }),
-      });
-      const data = await res.json();
-
-      if (!res.ok) {
-        const msg = data.error || 'Failed to fetch balance';
-        const debug = data.debug ? ` (${data.debug})` : '';
-        setFetchError(msg + debug);
-        return;
-      }
-
-      setBankBalance(data.balance);
-      setBankBalanceDate(data.emailDate ? new Date(data.emailDate).toLocaleString('en-IN') : '');
-      setBankBalanceSnippet(data.snippet || '');
-    } catch (err) {
-      setFetchError(err instanceof Error ? err.message : 'Failed to fetch balance');
-    } finally {
-      setFetchingBalance(false);
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -113,62 +73,6 @@ export default function SavingsPage() {
             {formatINR(balanceData?.totalWithdrawn ?? 0)}
           </div>
         </div>
-      </div>
-
-      {/* ── Live Bank Balance from Gmail ───────────────────────────────────── */}
-      <div style={{ ...cardStyle, marginBottom: 16, borderLeft: '4px solid #8b5cf6' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 13, fontWeight: 600, color: '#1e293b', marginBottom: 4 }}>
-              🏦 Live Bank Balance (from Gmail)
-            </div>
-            <div style={{ fontSize: 12, color: '#64748b' }}>
-              Reads your latest HDFC/SBI/ICICI bank email and extracts the available balance.
-              Requires Gmail to be connected (Daily Expense page).
-            </div>
-          </div>
-          <button
-            onClick={handleFetchBankBalance}
-            disabled={fetchingBalance}
-            style={btnStyle('#8b5cf6')}
-          >
-            {fetchingBalance ? '⏳ Reading emails…' : '🔄 Fetch Bank Balance'}
-          </button>
-        </div>
-
-        {fetchError && (
-          <div style={{ marginTop: 12, background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', borderRadius: 6, padding: '8px 12px', fontSize: 13 }}>
-            ❌ {fetchError}
-          </div>
-        )}
-
-        {bankBalance !== null && (
-          <div style={{ marginTop: 12, background: '#f5f3ff', border: '1px solid #ddd6fe', borderRadius: 8, padding: '12px 16px' }}>
-            <div style={{ fontSize: 12, color: '#7c3aed', marginBottom: 4 }}>
-              Available Balance (as of {bankBalanceDate})
-            </div>
-            <div style={{ fontSize: 32, fontWeight: 700, color: '#7c3aed' }}>
-              {formatINR(bankBalance)}
-            </div>
-            {bankBalanceSnippet && (
-              <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 6, fontStyle: 'italic' }}>
-                From email: "{bankBalanceSnippet}…"
-              </div>
-            )}
-            <div style={{ marginTop: 10, fontSize: 12, color: '#64748b' }}>
-              Want to save this as your current balance?{' '}
-              <button
-                onClick={() => {
-                  setForm({ type: 'Deposit', amount: bankBalance, date: new Date().toISOString().slice(0, 10), description: 'Bank balance sync from Gmail' });
-                  window.scrollTo({ top: 400, behavior: 'smooth' });
-                }}
-                style={{ background: 'none', border: 'none', color: '#7c3aed', cursor: 'pointer', fontWeight: 600, fontSize: 12, textDecoration: 'underline' }}
-              >
-                Add as deposit entry ↓
-              </button>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* ── Add / Edit form ────────────────────────────────────────────────── */}
