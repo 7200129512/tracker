@@ -10,7 +10,6 @@ const navItems = [
   { to: '/daily-expense', label: 'Daily Expense', icon: '✦' },
   { to: '/loans', label: 'Loans', icon: '⊞' },
   { to: '/investments', label: 'Investments', icon: '◱' },
-  { to: '/savings', label: 'Savings', icon: '▣' },
   { to: '/settings', label: 'Settings', icon: '⚙' },
   { to: '/data', label: 'Data', icon: '▤' },
 ];
