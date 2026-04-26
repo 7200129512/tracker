@@ -44,7 +44,12 @@ export default function DashboardPage() {
       )}
 
       {/* Row 1 — Daily bank tracking + Income + Monthly Spend & Receive */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 16 }}>
+      <div style={{ 
+        display: 'grid', 
+        gridTemplateColumns: window.innerWidth < 768 ? '1fr' : 'repeat(3, 1fr)', 
+        gap: window.innerWidth < 768 ? 12 : 16, 
+        marginBottom: 16 
+      }}>
         <Card label="Daily Spend & Receive" value={`${formatINR(dailyExp?.todayTotal ?? 0)} / ${formatINR(dailyExp?.todayCredit ?? 0)}`} color="#f97316" />
         <IncomeCard 
           salary={formatINR(summary?.totalIncome ?? 0)}
@@ -55,7 +60,12 @@ export default function DashboardPage() {
       </div>
 
       {/* Row 2 — Monthly Surplus/Expenses, Investments, and Loan Breakdown */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 16 }}>
+      <div style={{ 
+        display: 'grid', 
+        gridTemplateColumns: window.innerWidth < 768 ? '1fr' : 'repeat(3, 1fr)', 
+        gap: window.innerWidth < 768 ? 12 : 16, 
+        marginBottom: 16 
+      }}>
         <IncomeCard 
           salary={formatINR(surplus)}
           pf={formatINR(summary?.totalExpenses ?? 0)}
@@ -75,7 +85,13 @@ export default function DashboardPage() {
             />
           );
         })()}
-        <div style={{ background: '#fff', borderRadius: 10, padding: '16px 20px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', borderLeft: '4px solid #f97316' }}>
+        <div style={{ 
+          background: '#fff', 
+          borderRadius: 10, 
+          padding: window.innerWidth < 768 ? '12px 16px' : '16px 20px', 
+          boxShadow: '0 1px 4px rgba(0,0,0,0.08)', 
+          borderLeft: '4px solid #f97316' 
+        }}>
           <div style={{ fontSize: 12, color: '#64748b', marginBottom: 6 }}>Loan Breakdown</div>
           {activeLoans.length > 0 ? (
             <div>
@@ -83,9 +99,9 @@ export default function DashboardPage() {
                 const remainingMonths = loan.emiAmount > 0 ? Math.ceil(loan.outstandingPrincipal / loan.emiAmount) : 0;
                 return (
                   <div key={loan.id}>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: '#1e293b', marginBottom: 2 }}>{loan.loanName}</div>
-                    <div style={{ fontSize: 18, fontWeight: 700, color: '#1e293b' }}>{formatINR(loan.outstandingPrincipal)}</div>
-                    <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>EMI: <span style={{ fontWeight: 700 }}>{formatINR(loan.emiAmount)}</span> · ~{remainingMonths}m</div>
+                    <div style={{ fontSize: window.innerWidth < 768 ? 13 : 14, fontWeight: 700, color: '#1e293b', marginBottom: 2 }}>{loan.loanName}</div>
+                    <div style={{ fontSize: window.innerWidth < 768 ? 16 : 18, fontWeight: 700, color: '#1e293b' }}>{formatINR(loan.outstandingPrincipal)}</div>
+                    <div style={{ fontSize: window.innerWidth < 768 ? 10 : 11, color: '#94a3b8', marginTop: 2 }}>EMI: <span style={{ fontWeight: 700 }}>{formatINR(loan.emiAmount)}</span> · ~{remainingMonths}m</div>
                   </div>
                 );
               })}
@@ -167,39 +183,58 @@ export default function DashboardPage() {
 }
 
 function Card({ label, value, color, highlight }: { label: string; value: string; color: string; highlight?: boolean }) {
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
   return (
     <div style={{
-      background: '#fff', borderRadius: 10, padding: '16px 20px',
-      boxShadow: '0 1px 4px rgba(0,0,0,0.08)', borderLeft: `4px solid ${color}`,
+      background: '#fff', 
+      borderRadius: 10, 
+      padding: isMobile ? '12px 16px' : '16px 20px',
+      boxShadow: '0 1px 4px rgba(0,0,0,0.08)', 
+      borderLeft: `4px solid ${color}`,
     }}>
       <div style={{ fontSize: 12, color: '#64748b', marginBottom: 6 }}>{label}</div>
-      <div style={{ fontSize: 18, fontWeight: 700, color: highlight ? '#ef4444' : '#1e293b' }}>{value}</div>
+      <div style={{ fontSize: isMobile ? 16 : 18, fontWeight: 700, color: highlight ? '#ef4444' : '#1e293b' }}>{value}</div>
     </div>
   );
 }
 
 function IncomeCard({ salary, pf, variablePay, labels }: { salary: string; pf: string; variablePay: string; labels?: string }) {
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
   const defaultLabels = labels || "Salary / PF / Variable Pay";
   const displayValues = variablePay ? `${salary} / ${pf} / ${variablePay}` : `${salary} / ${pf}`;
   return (
     <div style={{
-      background: '#fff', borderRadius: 10, padding: '16px 20px',
-      boxShadow: '0 1px 4px rgba(0,0,0,0.08)', borderLeft: '4px solid #22c55e',
+      background: '#fff', 
+      borderRadius: 10, 
+      padding: isMobile ? '12px 16px' : '16px 20px',
+      boxShadow: '0 1px 4px rgba(0,0,0,0.08)', 
+      borderLeft: '4px solid #22c55e',
     }}>
       <div style={{ fontSize: 12, color: '#64748b', marginBottom: 6 }}>{defaultLabels}</div>
-      <div style={{ fontSize: 18, fontWeight: 700, color: '#1e293b' }}>{displayValues}</div>
+      <div style={{ fontSize: isMobile ? 14 : 18, fontWeight: 700, color: '#1e293b' }}>{displayValues}</div>
     </div>
   );
 }
 
 function InvestmentCard({ invested, current, gainLoss }: { invested: string; current: string; gainLoss: string }) {
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
   return (
     <div style={{
-      background: '#fff', borderRadius: 10, padding: '16px 20px',
-      boxShadow: '0 1px 4px rgba(0,0,0,0.08)', borderLeft: '4px solid #3b82f6',
+      background: '#fff', 
+      borderRadius: 10, 
+      padding: isMobile ? '12px 16px' : '16px 20px',
+      boxShadow: '0 1px 4px rgba(0,0,0,0.08)', 
+      borderLeft: '4px solid #3b82f6',
     }}>
       <div style={{ fontSize: 12, color: '#64748b', marginBottom: 6 }}>Total Invested / Current Value / Total Gain/Loss</div>
-      <div style={{ fontSize: 18, fontWeight: 700, color: '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{invested} / {current} / {gainLoss}</div>
+      <div style={{ 
+        fontSize: isMobile ? 12 : 18, 
+        fontWeight: 700, 
+        color: '#1e293b', 
+        whiteSpace: 'nowrap', 
+        overflow: 'hidden', 
+        textOverflow: 'ellipsis' 
+      }}>{invested} / {current} / {gainLoss}</div>
     </div>
   );
 }
