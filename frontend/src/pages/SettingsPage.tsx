@@ -42,8 +42,15 @@ export default function SettingsPage() {
     setMessage('');
 
     try {
+      console.log('Setting monthly PF for user:', user.id);
+      
       // Delete existing monthly PF entries
-      await supabaseClient.delete(`/income_entries?user_id=eq.${user.id}&source_name=ilike.%Monthly%PF%&frequency=eq.monthly`);
+      console.log('Deleting existing PF entries...');
+      try {
+        await supabaseClient.delete(`/income_entries?user_id=eq.${user.id}&source_name=ilike.%Monthly%PF%&frequency=eq.monthly`);
+      } catch (err) {
+        console.log('No existing PF entries to delete or error:', err);
+      }
 
       // Create PF entries for the next 12 months starting from next month
       const today = new Date();
@@ -60,13 +67,22 @@ export default function SettingsPage() {
         });
       }
 
+      console.log('Creating PF entries:', entries.length);
+      
       // Insert all entries
+      let successCount = 0;
       for (const entry of entries) {
-        await supabaseClient.post('/income_entries', entry);
+        try {
+          await supabaseClient.post('/income_entries', entry);
+          successCount++;
+        } catch (err) {
+          console.error('Error creating entry:', err);
+        }
       }
 
-      setMessage(`✅ Monthly PF set to ₹${monthlyPF}. Created 12 automatic entries starting next month.`);
+      setMessage(`✅ Monthly PF set to ₹${monthlyPF}. Created ${successCount} automatic entries starting next month.`);
     } catch (err) {
+      console.error('Error:', err);
       setError(err instanceof Error ? err.message : 'Error setting monthly PF');
     } finally {
       setLoading(false);
