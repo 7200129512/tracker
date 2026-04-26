@@ -5,6 +5,7 @@ import Layout from './components/Layout';
 import DashboardPage from './pages/DashboardPage';
 import IncomePage from './pages/IncomePage';
 import ExpensesPage from './pages/ExpensesPage';
+import DailyExpensePage from './pages/DailyExpensePage';
 import LoansPage from './pages/LoansPage';
 import InvestmentsPage from './pages/InvestmentsPage';
 import SavingsPage from './pages/SavingsPage';
@@ -33,6 +34,7 @@ export default function App() {
           <Route index element={<DashboardPage />} />
           <Route path="income" element={<IncomePage />} />
           <Route path="expenses" element={<ExpensesPage />} />
+          <Route path="daily-expense" element={<DailyExpensePage />} />
           <Route path="loans" element={<LoansPage />} />
           <Route path="investments" element={<InvestmentsPage />} />
           <Route path="savings" element={<SavingsPage />} />

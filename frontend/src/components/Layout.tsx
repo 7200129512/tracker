@@ -9,6 +9,7 @@ const navItems = [
   { to: '/', label: '📊 Dashboard', end: true },
   { to: '/income', label: '💰 Income' },
   { to: '/expenses', label: '🧾 Expenses' },
+  { to: '/daily-expense', label: '💸 Daily Expense' },
   { to: '/loans', label: '🏦 Loans' },
   { to: '/investments', label: '📈 Investments' },
   { to: '/savings', label: '🏧 Savings' },
