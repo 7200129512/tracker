@@ -1,5 +1,5 @@
 import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer,
+  LineChart, Line, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, CartesianGrid, ReferenceLine,
 } from 'recharts';
 import { useDashboardSummary, useDashboardAlerts, useMonthlyDailyExpenses, useDailyChart } from '../api/dashboard';
 import { formatINR, currentMonth, formatMonth } from '../utils/format';
@@ -67,15 +67,42 @@ export default function DashboardPage() {
         <div style={{ ...cardStyle, marginTop: 8 }}>
           <h3 style={{ marginBottom: 4, color: '#1e293b' }}>Daily Transactions — {monthName}</h3>
           <p style={{ fontSize: 13, color: '#64748b', marginBottom: 16 }}>Day-by-day spent and received from your bank emails</p>
-          <ResponsiveContainer width="100%" height={260}>
-            <BarChart data={dailyChart} barCategoryGap="30%">
-              <XAxis dataKey="day" tick={{ fontSize: 11 }} label={{ value: 'Day', position: 'insideBottom', offset: -2, fontSize: 11 }} />
-              <YAxis tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 11 }} />
-              <Tooltip formatter={(v: number) => formatINR(v)} labelFormatter={(l) => `Day ${l}`} />
-              <Legend />
-              <Bar dataKey="spent" fill="#ef4444" name="Spent" radius={[3, 3, 0, 0]} />
-              <Bar dataKey="received" fill="#22c55e" name="Received" radius={[3, 3, 0, 0]} />
-            </BarChart>
+          <ResponsiveContainer width="100%" height={280}>
+            <LineChart data={dailyChart} margin={{ top: 8, right: 16, left: 0, bottom: 20 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+              <XAxis
+                dataKey="day"
+                tick={{ fontSize: 11 }}
+                label={{ value: 'Day of Month', position: 'insideBottom', offset: -12, fontSize: 11, fill: '#94a3b8' }}
+              />
+              <YAxis
+                tickFormatter={(v) => v === 0 ? '₹0' : `₹${(v / 1000).toFixed(0)}k`}
+                tick={{ fontSize: 11 }}
+                width={50}
+              />
+              <Tooltip
+                formatter={(v: number, name: string) => [formatINR(v), name === 'spent' ? 'Spent' : 'Received']}
+                labelFormatter={(l) => `Day ${l}`}
+                contentStyle={{ fontSize: 13 }}
+              />
+              <Legend verticalAlign="top" height={32} formatter={(v) => v === 'spent' ? 'Spent' : 'Received'} />
+              <Line
+                type="monotone"
+                dataKey="received"
+                stroke="#22c55e"
+                strokeWidth={2}
+                dot={(props: any) => props.payload.received > 0 ? <circle cx={props.cx} cy={props.cy} r={4} fill="#22c55e" /> : <g />}
+                activeDot={{ r: 6 }}
+              />
+              <Line
+                type="monotone"
+                dataKey="spent"
+                stroke="#ef4444"
+                strokeWidth={2}
+                dot={(props: any) => props.payload.spent > 0 ? <circle cx={props.cx} cy={props.cy} r={4} fill="#ef4444" /> : <g />}
+                activeDot={{ r: 6 }}
+              />
+            </LineChart>
           </ResponsiveContainer>
         </div>
       )}
