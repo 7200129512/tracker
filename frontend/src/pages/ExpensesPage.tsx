@@ -1,18 +1,16 @@
 import { useState } from 'react';
 import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, Legend,
+  PieChart, Pie, Cell, Legend, Tooltip,
 } from 'recharts';
 import {
   useExpenseEntries,
-  useMonthlySummary,
   useCategoryBreakdown,
   useAddExpense,
   useUpdateExpense,
   useDeleteExpense,
 } from '../api/expenses';
 import type { ExpenseEntry } from '../types';
-import { formatINR, formatMonth, currentMonth } from '../utils/format';
+import { formatINR, currentMonth } from '../utils/format';
 
 const CATEGORIES: ExpenseEntry['category'][] = [
   'Rent', 'EMI', 'Food', 'Transport', 'Utilities', 'Entertainment', 'Other',
@@ -31,7 +29,6 @@ const EMPTY: Omit<ExpenseEntry, 'id'> = {
 export default function ExpensesPage() {
   const month = currentMonth();
   const { data: entries = [], isLoading } = useExpenseEntries();
-  const { data: summary = [] } = useMonthlySummary();
   const { data: breakdown = [] } = useCategoryBreakdown(month);
   const addExpense = useAddExpense();
   const updateExpense = useUpdateExpense();
@@ -200,20 +197,6 @@ export default function ExpensesPage() {
         )}
       </div>
 
-      {/* Chart */}
-      {summary.length > 0 && (
-        <div style={{ ...cardStyle, marginTop: 16 }}>
-          <h3 style={{ marginBottom: 12 }}>12-Month Expense History</h3>
-          <ResponsiveContainer width="100%" height={220}>
-            <BarChart data={summary.map((d) => ({ ...d, month: formatMonth(d.month) }))}>
-              <XAxis dataKey="month" tick={{ fontSize: 11 }} />
-              <YAxis tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 11 }} />
-              <Tooltip formatter={(v: number) => formatINR(v)} />
-              <Bar dataKey="expenses" fill="#ef4444" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      )}
     </div>
   );
 }
