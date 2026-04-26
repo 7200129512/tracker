@@ -56,12 +56,12 @@ export default function DashboardPage() {
 
       {/* Row 2 — Monthly totals */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(1, 1fr)', gap: 16, marginBottom: 16 }}>
-        <Card label="Monthly Spend & Receive" value={`${formatINR(dailyExp?.monthTotal ?? 0)} / ${formatINR(dailyExp?.monthCredit ?? 0)}`} color="#dc2626" />
-      </div>
-
-      {/* Row 3 — Obligations */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(1, 1fr)', gap: 16, marginBottom: 16 }}>
-        <Card label="Fixed Expenses (Rent etc.)" value={formatINR(summary?.totalExpenses ?? 0)} color="#ef4444" />
+        <IncomeCard 
+          salary={formatINR(surplus)}
+          pf={formatINR(summary?.totalExpenses ?? 0)}
+          variablePay=""
+          labels="Monthly Surplus / Fixed Expenses"
+        />
       </div>
 
       {/* Loan breakdown — one card per active loan */}
@@ -193,14 +193,16 @@ function Card({ label, value, color, highlight }: { label: string; value: string
   );
 }
 
-function IncomeCard({ salary, pf, variablePay }: { salary: string; pf: string; variablePay: string }) {
+function IncomeCard({ salary, pf, variablePay, labels }: { salary: string; pf: string; variablePay: string; labels?: string }) {
+  const defaultLabels = labels || "Salary / PF / Variable Pay";
+  const displayValues = variablePay ? `${salary} / ${pf} / ${variablePay}` : `${salary} / ${pf}`;
   return (
     <div style={{
       background: '#fff', borderRadius: 10, padding: '16px 20px',
       boxShadow: '0 1px 4px rgba(0,0,0,0.08)', borderLeft: '4px solid #22c55e',
     }}>
-      <div style={{ fontSize: 12, color: '#64748b', marginBottom: 6 }}>Salary / PF / Variable Pay</div>
-      <div style={{ fontSize: 20, fontWeight: 700, color: '#1e293b' }}>{salary} / {pf} / {variablePay}</div>
+      <div style={{ fontSize: 12, color: '#64748b', marginBottom: 6 }}>{defaultLabels}</div>
+      <div style={{ fontSize: 20, fontWeight: 700, color: '#1e293b' }}>{displayValues}</div>
     </div>
   );
 }
