@@ -3,7 +3,6 @@ import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
 import DashboardPage from './pages/DashboardPage';
-import IncomePage from './pages/IncomePage';
 import ExpensesPage from './pages/ExpensesPage';
 import DailyExpensePage from './pages/DailyExpensePage';
 import LoansPage from './pages/LoansPage';
@@ -32,7 +31,6 @@ export default function App() {
           }
         >
           <Route index element={<DashboardPage />} />
-          <Route path="income" element={<IncomePage />} />
           <Route path="expenses" element={<ExpensesPage />} />
           <Route path="daily-expense" element={<DailyExpensePage />} />
           <Route path="loans" element={<LoansPage />} />

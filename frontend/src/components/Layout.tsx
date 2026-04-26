@@ -6,7 +6,6 @@ import { currentMonth, formatMonth } from '../utils/format';
 
 const navItems = [
   { to: '/', label: '📊 Dashboard', end: true },
-  { to: '/income', label: '💰 Income' },
   { to: '/expenses', label: '🧾 Expenses' },
   { to: '/daily-expense', label: '💸 Daily Expense' },
   { to: '/loans', label: '🏦 Loans' },
