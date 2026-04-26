@@ -34,35 +34,26 @@ export default function InvestmentsPage() {
 
     setLoadingPrices(true);
     const fetchPrices = async () => {
-      // Fetch prices in parallel batches of 5 to avoid rate limits
-      const batchSize = 5;
-      const updated: HoldingWithPriceError[] = [...holdings];
-
-      for (let i = 0; i < holdings.length; i += batchSize) {
-        const batch = holdings.slice(i, i + batchSize);
-        const results = await Promise.all(
-          batch.map(async (holding) => {
-            try {
-              const response = await fetch(
-                `/.netlify/functions/stock-price?symbol=${encodeURIComponent(holding.stockSymbol)}`
-              );
-              if (response.ok) {
-                const data = await response.json();
-                return { ...holding, currentPrice: data.price };
-              }
-              console.warn(`Price fetch failed for ${holding.stockSymbol}: ${response.status}`);
-              return { ...holding, priceError: 'unavailable' };
-            } catch (err) {
-              console.error(`Price fetch error for ${holding.stockSymbol}:`, err);
-              return { ...holding, priceError: 'unavailable' };
+      // Fetch all prices in parallel — Yahoo Finance handles concurrent requests fine
+      const results = await Promise.all(
+        holdings.map(async (holding) => {
+          try {
+            const response = await fetch(
+              `/.netlify/functions/stock-price?symbol=${encodeURIComponent(holding.stockSymbol)}`
+            );
+            if (response.ok) {
+              const data = await response.json();
+              return { ...holding, currentPrice: data.price };
             }
-          })
-        );
-        // Merge batch results back
-        results.forEach((r, j) => { updated[i + j] = r; });
-        setHoldingsWithPrices([...updated]); // update UI progressively
-      }
-
+            console.warn(`Price fetch failed for ${holding.stockSymbol}: ${response.status}`);
+            return { ...holding, priceError: 'unavailable' };
+          } catch (err) {
+            console.error(`Price fetch error for ${holding.stockSymbol}:`, err);
+            return { ...holding, priceError: 'unavailable' };
+          }
+        })
+      );
+      setHoldingsWithPrices(results);
       setLoadingPrices(false);
     };
 
