@@ -277,11 +277,11 @@ exports.handler = async (event) => {
       await updateAccessToken(userId, accessToken, newExpiry);
     }
 
-    // Search Gmail for bank transaction emails (last 7 days)
-    const since = Math.floor((Date.now() - 7 * 24 * 60 * 60 * 1000) / 1000);
+    // Search Gmail for bank transaction emails (last 30 days)
+    const since = Math.floor((Date.now() - 30 * 24 * 60 * 60 * 1000) / 1000);
     const bankQuery = `(from:alerts@hdfcbank.net OR from:alerts@hdfcbank.bank.in OR from:noreply@hdfcbank.com OR from:hdfcbank.com OR from:alerts@sbi.co.in OR from:sbiintouch.com OR from:icicibank.com OR from:axisbank.com OR from:kotakbank.com OR from:yesbank.in) after:${since}`;
 
-    const messages = await fetchGmailMessages(accessToken, bankQuery, 30);
+    const messages = await fetchGmailMessages(accessToken, bankQuery, 100);
 
     let saved = 0;
     let skipped = 0;

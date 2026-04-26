@@ -266,7 +266,7 @@ export default function DailyExpensePage() {
 
         {gmailConnected && (
           <div style={{ marginTop: 12, padding: '8px 12px', background: '#f0fdf4', borderRadius: 6, fontSize: 12, color: '#166534' }}>
-            ✅ Reads emails from: alerts@hdfcbank.net, SBI, ICICI, Axis, Kotak &amp; more. Scans last 7 days on each sync.
+            ✅ Reads emails from: alerts@hdfcbank.net, SBI, ICICI, Axis, Kotak &amp; more. Scans last 30 days on each sync.
           </div>
         )}
       </div>
@@ -325,7 +325,7 @@ export default function DailyExpensePage() {
                 </button>
               </div>
               <div style={{ padding: '10px 14px', background: '#f8fafc', borderRadius: 6, fontSize: 13, color: '#475569' }}>
-                <strong>How it works:</strong> Scans your Gmail for bank emails from the last 7 days →
+                <strong>How it works:</strong> Scans your Gmail for bank emails from the last 30 days →
                 Extracts amount, merchant, category → Saves to your transactions automatically.
               </div>
             </div>
