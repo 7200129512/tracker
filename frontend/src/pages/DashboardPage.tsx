@@ -45,36 +45,8 @@ export default function DashboardPage() {
 
       {/* Row 1 — Daily bank tracking + Income */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 16, marginBottom: 16 }}>
-        {/* Daily Spend & Receive */}
-        <div style={{ background: '#fff', borderRadius: 10, padding: '16px 20px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}>
-          <div style={{ fontSize: 12, color: '#64748b', marginBottom: 8, fontWeight: 600 }}>Daily Spend & Receive ({todayLabel})</div>
-          <div style={{ display: 'flex', gap: 12, marginBottom: 8 }}>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 11, color: '#f97316', marginBottom: 2 }}>Spent</div>
-              <div style={{ fontSize: 16, fontWeight: 700, color: '#1e293b' }}>{formatINR(dailyExp?.todayTotal ?? 0)}</div>
-            </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 11, color: '#22c55e', marginBottom: 2 }}>Received</div>
-              <div style={{ fontSize: 16, fontWeight: 700, color: '#1e293b' }}>{formatINR(dailyExp?.todayCredit ?? 0)}</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Monthly Spend & Receive */}
-        <div style={{ background: '#fff', borderRadius: 10, padding: '16px 20px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}>
-          <div style={{ fontSize: 12, color: '#64748b', marginBottom: 8, fontWeight: 600 }}>Monthly Spend & Receive ({formatMonth(month)})</div>
-          <div style={{ display: 'flex', gap: 12, marginBottom: 8 }}>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 11, color: '#dc2626', marginBottom: 2 }}>Spent</div>
-              <div style={{ fontSize: 16, fontWeight: 700, color: '#1e293b' }}>{formatINR(dailyExp?.monthTotal ?? 0)}</div>
-            </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 11, color: '#16a34a', marginBottom: 2 }}>Received</div>
-              <div style={{ fontSize: 16, fontWeight: 700, color: '#1e293b' }}>{formatINR(dailyExp?.monthCredit ?? 0)}</div>
-            </div>
-          </div>
-        </div>
-
+        <Card label={`Daily Spend & Receive (${todayLabel})`} value={`${formatINR(dailyExp?.todayTotal ?? 0)} / ${formatINR(dailyExp?.todayCredit ?? 0)}`} color="#f97316" />
+        <Card label={`Monthly Spend & Receive (${formatMonth(month)})`} value={`${formatINR(dailyExp?.monthTotal ?? 0)} / ${formatINR(dailyExp?.monthCredit ?? 0)}`} color="#dc2626" />
         <Card label="Monthly Income" value={formatINR(summary?.totalIncome ?? 0)} color="#22c55e" />
         <Card label="Monthly PF" value={formatINR(summary?.pfAmount ?? 0)} color="#8b5cf6" />
         <Card label="Annual Variable Pay" value={formatINR(summary?.variablePayAmount ?? 0)} color="#f59e0b" />
