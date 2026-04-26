@@ -12,7 +12,8 @@ const navItems = [
   { to: '/loans', label: '🏦 Loans' },
   { to: '/investments', label: '📈 Investments' },
   { to: '/savings', label: '🏧 Savings' },
-  { to: '/data', label: '⚙️ Data' },
+  { to: '/settings', label: '⚙️ Settings' },
+  { to: '/data', label: '📋 Data' },
 ];
 
 export default function Layout() {

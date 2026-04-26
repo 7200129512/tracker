@@ -8,6 +8,7 @@ import ExpensesPage from './pages/ExpensesPage';
 import LoansPage from './pages/LoansPage';
 import InvestmentsPage from './pages/InvestmentsPage';
 import SavingsPage from './pages/SavingsPage';
+import SettingsPage from './pages/SettingsPage';
 import DataManagementPage from './pages/DataManagementPage';
 import SignUpPage from './pages/SignUpPage';
 import SignInPage from './pages/SignInPage';
@@ -35,6 +36,7 @@ export default function App() {
           <Route path="loans" element={<LoansPage />} />
           <Route path="investments" element={<InvestmentsPage />} />
           <Route path="savings" element={<SavingsPage />} />
+          <Route path="settings" element={<SettingsPage />} />
           <Route path="data" element={<DataManagementPage />} />
         </Route>
       </Routes>
