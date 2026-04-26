@@ -1,8 +1,6 @@
 import { useState } from 'react';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import {
   useIncomeEntries,
-  useMonthlyIncomeSummary,
   useAddIncome,
   useUpdateIncome,
   useDeleteIncome,
@@ -18,9 +16,10 @@ const EMPTY: Omit<IncomeEntry, 'id'> = {
   incomeType: 'other',
 };
 
+type TabType = 'salary' | 'pf' | 'variable';
+
 export default function IncomePage() {
   const { data: entries = [], isLoading } = useIncomeEntries();
-  const { data: summary = [] } = useMonthlyIncomeSummary();
   const addIncome = useAddIncome();
   const updateIncome = useUpdateIncome();
   const deleteIncome = useDeleteIncome();
@@ -28,6 +27,7 @@ export default function IncomePage() {
   const [form, setForm] = useState<Omit<IncomeEntry, 'id'>>(EMPTY);
   const [editId, setEditId] = useState<number | null>(null);
   const [error, setError] = useState('');
+  const [activeTab, setActiveTab] = useState<TabType>('salary');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,7 +56,7 @@ export default function IncomePage() {
     });
   };
 
-  // Calculate income breakdown based on source name and frequency
+  // Calculate income breakdown based on source name
   const getIncomeType = (sourceName: string | undefined): string => {
     if (!sourceName) return 'other';
     const lower = sourceName.toLowerCase();
@@ -66,39 +66,14 @@ export default function IncomePage() {
     return 'other';
   };
 
-  // Base Salary: monthly entries that are salary (or just the largest monthly entry if no label)
-  const baseIncome = entries.find(e => getIncomeType(e.sourceName) === 'base' && e.frequency === 'monthly')?.amount || 0;
-  
-  // PF: all entries with 'pf' in name, OR monthly entries with amount 21000
-  const pfIncome = entries.filter(e => {
-    const type = getIncomeType(e.sourceName);
-    if (type === 'pf') return true;
-    if (e.frequency === 'monthly' && e.amount === 21000) return true;
-    return false;
-  }).reduce((sum, e) => sum + e.amount, 0);
-  
-  // Variable Pay: annual entries with 'variable' in name, OR annual entries with amount 42000
-  const variableIncome = entries.filter(e => {
-    const type = getIncomeType(e.sourceName);
-    if (type === 'variable' && e.frequency === 'annual') return true;
-    if (e.frequency === 'annual' && e.amount === 42000) return true;
-    return false;
-  }).reduce((sum, e) => sum + e.amount, 0);
-  
-  // Other monthly income (excluding base, pf, and variable)
-  const otherIncome = entries
-    .filter(e => {
-      const type = getIncomeType(e.sourceName);
-      if (['base', 'variable', 'pf'].includes(type)) return false;
-      if (e.frequency !== 'monthly') return false;
-      if (e.amount === 21000) return false; // Skip PF
-      if (e.amount === 42000) return false; // Skip variable
-      return true;
-    })
-    .reduce((s, e) => s + e.amount, 0);
-  
-  // Total monthly = base + other (NOT including PF or Variable Pay)
-  const totalMonthly = baseIncome + otherIncome;
+  // Filter entries by type
+  const salaryEntries = entries.filter(e => getIncomeType(e.sourceName) === 'base' && e.frequency === 'monthly');
+  const pfEntries = entries.filter(e => getIncomeType(e.sourceName) === 'pf' && e.frequency === 'monthly');
+  const variableEntries = entries.filter(e => getIncomeType(e.sourceName) === 'variable' && e.frequency === 'annual');
+
+  const baseIncome = salaryEntries.reduce((sum, e) => sum + e.amount, 0);
+  const pfIncome = pfEntries.reduce((sum, e) => sum + e.amount, 0);
+  const variableIncome = variableEntries.reduce((sum, e) => sum + e.amount, 0);
 
   return (
     <div>
@@ -108,17 +83,38 @@ export default function IncomePage() {
       <div style={{ display: 'flex', gap: 16, marginBottom: 16, flexWrap: 'wrap' }}>
         <SummaryCard label="Base Salary" value={formatINR(baseIncome)} color="#3b82f6" />
         <SummaryCard label="Monthly PF" value={formatINR(pfIncome)} color="#8b5cf6" />
-        <SummaryCard label="Other Monthly" value={formatINR(otherIncome)} color="#22c55e" />
-        <SummaryCard label="Total Monthly" value={formatINR(totalMonthly)} color="#1e293b" />
         <div style={{ background: '#fff', borderRadius: 10, padding: '14px 18px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', borderLeft: '4px solid #f59e0b', minWidth: 200 }}>
           <div style={{ fontSize: 12, color: '#64748b', marginBottom: 4 }}>Annual Variable Pay</div>
           <div style={{ fontSize: 16, fontWeight: 700, color: '#1e293b' }}>{formatINR(variableIncome)}</div>
         </div>
       </div>
 
+      {/* Tabs */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 16, borderBottom: '1px solid #e2e8f0' }}>
+        <TabButton
+          label="💰 Salary"
+          active={activeTab === 'salary'}
+          onClick={() => setActiveTab('salary')}
+        />
+        <TabButton
+          label="🏦 PF (Monthly)"
+          active={activeTab === 'pf'}
+          onClick={() => setActiveTab('pf')}
+        />
+        <TabButton
+          label="📈 Variable Pay"
+          active={activeTab === 'variable'}
+          onClick={() => setActiveTab('variable')}
+        />
+      </div>
+
       {/* Form */}
       <div style={cardStyle}>
-        <h3 style={{ marginBottom: 12 }}>{editId ? 'Edit Income' : 'Add Income'}</h3>
+        <h3 style={{ marginBottom: 12 }}>
+          {activeTab === 'salary' && 'Add Base Salary'}
+          {activeTab === 'pf' && 'Add Monthly PF'}
+          {activeTab === 'variable' && 'Add Annual Variable Pay'}
+        </h3>
         {error && <p style={{ color: 'red', marginBottom: 8 }}>{error}</p>}
         <form onSubmit={handleSubmit} style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           <input
@@ -168,83 +164,144 @@ export default function IncomePage() {
         </form>
       </div>
 
-      {/* List */}
-      <div style={{ ...cardStyle, marginTop: 16 }}>
-        <h3 style={{ marginBottom: 12 }}>Income Entries</h3>
-        {isLoading ? (
-          <p>Loading…</p>
-        ) : entries.length === 0 ? (
-          <p style={{ color: '#94a3b8' }}>No income entries yet.</p>
-        ) : (
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
-            <thead>
-              <tr style={{ background: '#f1f5f9' }}>
-                {['Source', 'Type', 'Amount', 'Frequency', 'Effective Date', ''].map((h) => (
-                  <th key={h} style={thStyle}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {entries.map((e) => {
-                const type = getIncomeType(e.sourceName);
-                return (
+      {/* List - Salary Tab */}
+      {activeTab === 'salary' && (
+        <div style={{ ...cardStyle, marginTop: 16 }}>
+          <h3 style={{ marginBottom: 12 }}>Base Salary Entries</h3>
+          {isLoading ? (
+            <p>Loading…</p>
+          ) : salaryEntries.length === 0 ? (
+            <p style={{ color: '#94a3b8' }}>No salary entries yet.</p>
+          ) : (
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
+              <thead>
+                <tr style={{ background: '#f1f5f9' }}>
+                  {['Source', 'Amount', 'Frequency', 'Effective Date', ''].map((h) => (
+                    <th key={h} style={thStyle}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {salaryEntries.map((e) => (
                   <tr key={e.id} style={{ borderBottom: '1px solid #e2e8f0' }}>
                     <td style={tdStyle}>{e.sourceName}</td>
-                    <td style={tdStyle}><span style={{ background: getTypeColor(type), color: '#fff', padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600 }}>{type}</span></td>
                     <td style={tdStyle}>{formatINR(e.amount)}</td>
                     <td style={tdStyle}>{e.frequency}</td>
                     <td style={tdStyle}>{e.effectiveDate}</td>
                     <td style={tdStyle}>
                       <button onClick={() => startEdit(e)} style={smallBtn('#3b82f6')}>Edit</button>
-                      <button
-                        onClick={() => deleteIncome.mutate(e.id)}
-                        style={smallBtn('#ef4444')}
-                      >
-                        Delete
-                      </button>
+                      <button onClick={() => deleteIncome.mutate(e.id)} style={smallBtn('#ef4444')}>Delete</button>
                     </td>
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        )}
-      </div>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
 
-      {/* Chart */}
-      {summary.length > 0 && (
+      {/* List - PF Tab */}
+      {activeTab === 'pf' && (
         <div style={{ ...cardStyle, marginTop: 16 }}>
-          <h3 style={{ marginBottom: 12 }}>12-Month Income History</h3>
-          <ResponsiveContainer width="100%" height={220}>
-            <BarChart data={summary.map((d) => ({ ...d, month: formatMonth(d.month) }))}>
-              <XAxis dataKey="month" tick={{ fontSize: 11 }} />
-              <YAxis tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 11 }} />
-              <Tooltip formatter={(v: number) => formatINR(v)} />
-              <Bar dataKey="income" fill="#22c55e" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+          <h3 style={{ marginBottom: 12 }}>Monthly PF Entries</h3>
+          {isLoading ? (
+            <p>Loading…</p>
+          ) : pfEntries.length === 0 ? (
+            <p style={{ color: '#94a3b8' }}>No PF entries yet. Go to Settings to set up automatic monthly PF.</p>
+          ) : (
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
+              <thead>
+                <tr style={{ background: '#f1f5f9' }}>
+                  {['Month', 'Amount', 'Frequency', ''].map((h) => (
+                    <th key={h} style={thStyle}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {pfEntries.map((e) => (
+                  <tr key={e.id} style={{ borderBottom: '1px solid #e2e8f0' }}>
+                    <td style={tdStyle}>{formatMonth(e.effectiveDate)}</td>
+                    <td style={tdStyle}>{formatINR(e.amount)}</td>
+                    <td style={tdStyle}>{e.frequency}</td>
+                    <td style={tdStyle}>
+                      <button onClick={() => startEdit(e)} style={smallBtn('#3b82f6')}>Edit</button>
+                      <button onClick={() => deleteIncome.mutate(e.id)} style={smallBtn('#ef4444')}>Delete</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
+
+      {/* List - Variable Pay Tab */}
+      {activeTab === 'variable' && (
+        <div style={{ ...cardStyle, marginTop: 16 }}>
+          <h3 style={{ marginBottom: 12 }}>Annual Variable Pay Entries</h3>
+          {isLoading ? (
+            <p>Loading…</p>
+          ) : variableEntries.length === 0 ? (
+            <p style={{ color: '#94a3b8' }}>No variable pay entries yet.</p>
+          ) : (
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
+              <thead>
+                <tr style={{ background: '#f1f5f9' }}>
+                  {['Source', 'Amount', 'Frequency', 'Effective Date', ''].map((h) => (
+                    <th key={h} style={thStyle}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {variableEntries.map((e) => (
+                  <tr key={e.id} style={{ borderBottom: '1px solid #e2e8f0' }}>
+                    <td style={tdStyle}>{e.sourceName}</td>
+                    <td style={tdStyle}>{formatINR(e.amount)}</td>
+                    <td style={tdStyle}>{e.frequency}</td>
+                    <td style={tdStyle}>{e.effectiveDate}</td>
+                    <td style={tdStyle}>
+                      <button onClick={() => startEdit(e)} style={smallBtn('#3b82f6')}>Edit</button>
+                      <button onClick={() => deleteIncome.mutate(e.id)} style={smallBtn('#ef4444')}>Delete</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       )}
     </div>
   );
 }
 
+function TabButton({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        padding: '10px 16px',
+        background: active ? '#3b82f6' : 'transparent',
+        color: active ? '#fff' : '#64748b',
+        border: 'none',
+        borderBottom: active ? '3px solid #3b82f6' : '3px solid transparent',
+        cursor: 'pointer',
+        fontSize: 14,
+        fontWeight: active ? 600 : 400,
+        transition: 'all 0.2s',
+      }}
+    >
+      {label}
+    </button>
+  );
+}
+
 function SummaryCard({ label, value, color }: { label: string; value: string; color: string }) {
   return (
-    <div style={{ background: '#fff', borderRadius: 10, padding: '14px 18px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', borderLeft: `4px solid ${color}`, minWidth: 160 }}>
+    <div style={{ background: '#fff', borderRadius: 10, padding: '14px 18px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', borderLeft: `4px solid ${color}`, minWidth: 200 }}>
       <div style={{ fontSize: 12, color: '#64748b', marginBottom: 4 }}>{label}</div>
       <div style={{ fontSize: 16, fontWeight: 700, color: '#1e293b' }}>{value}</div>
     </div>
   );
-}
-
-function getTypeColor(type: string): string {
-  switch (type) {
-    case 'base': return '#3b82f6';
-    case 'variable': return '#f59e0b';
-    case 'pf': return '#8b5cf6';
-    default: return '#64748b';
-  }
 }
 
 const cardStyle: React.CSSProperties = {
@@ -253,36 +310,47 @@ const cardStyle: React.CSSProperties = {
   padding: 20,
   boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
 };
+
 const inputStyle: React.CSSProperties = {
-  padding: '8px 12px',
+  padding: '10px 14px',
   border: '1px solid #e2e8f0',
   borderRadius: 6,
   fontSize: 14,
-  minWidth: 160,
+  fontFamily: 'inherit',
 };
-const btnStyle = (bg: string): React.CSSProperties => ({
-  background: bg,
+
+const btnStyle = (color: string): React.CSSProperties => ({
+  padding: '10px 16px',
+  background: color,
   color: '#fff',
   border: 'none',
   borderRadius: 6,
-  padding: '8px 16px',
-  cursor: 'pointer',
   fontSize: 14,
+  fontWeight: 600,
+  cursor: 'pointer',
 });
-const smallBtn = (bg: string): React.CSSProperties => ({
-  background: bg,
+
+const smallBtn = (color: string): React.CSSProperties => ({
+  padding: '4px 8px',
+  background: color,
   color: '#fff',
   border: 'none',
   borderRadius: 4,
-  padding: '4px 10px',
-  cursor: 'pointer',
   fontSize: 12,
+  cursor: 'pointer',
   marginRight: 4,
 });
+
 const thStyle: React.CSSProperties = {
-  padding: '8px 12px',
+  padding: '10px 12px',
   textAlign: 'left',
   fontWeight: 600,
+  fontSize: 13,
   color: '#475569',
 };
-const tdStyle: React.CSSProperties = { padding: '8px 12px', color: '#334155' };
+
+const tdStyle: React.CSSProperties = {
+  padding: '10px 12px',
+  textAlign: 'left',
+  fontSize: 13,
+};
