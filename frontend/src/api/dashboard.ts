@@ -48,8 +48,9 @@ export const useDashboardSummary = (month: string) => {
         const totalExpenses = expenseRes.data.reduce((sum: number, row: any) => sum + parseFloat(row.amount || 0), 0);
 
         // Fetch loans for current user ONLY
-        const loanRes = await supabaseClient.get(`/loans?user_id=eq.${user.id}&select=outstanding_principal&is_closed=eq.false`);
+        const loanRes = await supabaseClient.get(`/loans?user_id=eq.${user.id}&select=outstanding_principal,emi_amount&is_closed=eq.false`);
         const outstandingLoanPrincipal = loanRes.data.reduce((sum: number, row: any) => sum + parseFloat(row.outstanding_principal || 0), 0);
+        const monthlyEmi = loanRes.data.reduce((sum: number, row: any) => sum + parseFloat(row.emi_amount || 0), 0);
 
         // Fetch investments for current user ONLY
         const investRes = await supabaseClient.get(`/investment_holdings?user_id=eq.${user.id}&is_closed=eq.false&select=quantity,purchase_price`);
@@ -78,6 +79,7 @@ export const useDashboardSummary = (month: string) => {
           portfolioGainLossPct: 0,
           savingsBalance: parseFloat(savingsBalance.toFixed(2)),
           outstandingLoanPrincipal: parseFloat(outstandingLoanPrincipal.toFixed(2)),
+          monthlyEmi: parseFloat(monthlyEmi.toFixed(2)),
           pfAmount: parseFloat(pfAmount.toFixed(2)),
           variablePayAmount: parseFloat(variablePayAmount.toFixed(2)),
         };

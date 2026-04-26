@@ -89,6 +89,7 @@ export interface DashboardSummary {
   totalExpenses: number;
   monthlySurplus: number;
   outstandingLoanPrincipal: number;
+  monthlyEmi: number;
   netWorth: number;
   savingsRate: number;
   portfolioCurrentValue: number;

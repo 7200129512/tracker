@@ -55,7 +55,8 @@ export default function DashboardPage() {
         />
         <Card label="Savings Balance" value={formatINR(summary?.savingsBalance ?? 0)} color="#0ea5e9" />
         <Card label="Savings Rate" value={formatPct(summary?.savingsRate ?? 0)} color="#14b8a6" />
-        <Card label="Net Worth" value={formatINR(summary?.netWorth ?? 0)} color="#1e293b" />
+        <Card label="Loan Outstanding" value={formatINR(summary?.outstandingLoanPrincipal ?? 0)} color="#ef4444" />
+        <Card label="Monthly EMI" value={formatINR(summary?.monthlyEmi ?? 0)} color="#f97316" />
       </div>
 
       {/* Daily Expense cards */}
