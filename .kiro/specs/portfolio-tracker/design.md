@@ -177,11 +177,13 @@ CREATE TABLE expense_entries (
 CREATE TABLE loans (
     id                    SERIAL PRIMARY KEY,
     loan_name             VARCHAR(255) NOT NULL,
+    loan_type             VARCHAR(50) NOT NULL DEFAULT 'Other',  -- e.g. 'Car Loan', 'Home Loan'
     original_principal    NUMERIC(14, 2) NOT NULL CHECK (original_principal > 0),
     outstanding_principal NUMERIC(14, 2) NOT NULL CHECK (outstanding_principal >= 0),
     emi_amount            NUMERIC(14, 2) NOT NULL CHECK (emi_amount > 0),
     interest_rate_pa      NUMERIC(6, 4) NOT NULL CHECK (interest_rate_pa >= 0),
     emi_start_date        DATE NOT NULL,
+    tenure_months         INTEGER NOT NULL DEFAULT 0,            -- original loan tenure in months (0 = unknown)
     is_closed             BOOLEAN NOT NULL DEFAULT FALSE,
     created_at            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at            TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -277,11 +279,13 @@ export interface ExpenseEntry {
 export interface Loan {
   id: number;
   loanName: string;
+  loanType: string;               // e.g. 'Car Loan', 'Home Loan', 'Personal Loan'
   originalPrincipal: number;
   outstandingPrincipal: number;
   emiAmount: number;
   interestRatePa: number;
   emiStartDate: string;
+  tenureMonths: number;           // original loan tenure in months (0 = unknown)
   isClosed: boolean;
   remainingInstalments: number;   // computed
   estimatedClosureDate: string;   // computed

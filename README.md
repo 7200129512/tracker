@@ -17,7 +17,7 @@ A personal finance web application for tracking income, expenses, loans, investm
 - **Frontend**: React + TypeScript + Vite + TanStack React Query + Recharts
 - **Backend**: Node.js + Express + TypeScript
 - **Database**: PostgreSQL
-- **Market Data**: Yahoo Finance (via `yahoo-finance2`)
+- **Market Data**: Yahoo Finance (Netlify function + backend scheduler via `yahoo-finance2`)
 
 ## Prerequisites
 
@@ -108,6 +108,55 @@ On first launch, the app pre-populates:
 - Other Expenses: ₹15,000/month (Fixed/Other)
 - Car Loan: ₹10,54,000 outstanding, ₹18,552 EMI
 
+## Dashboard Calculations
+
+### Monthly Surplus
+
+```
+Monthly Surplus = Total Income − Total Expenses (expense_entries) − Loan EMIs
+```
+
+- **Total Income** — sum of income entries for the current month, excluding PF and Variable Pay entries.
+- **Total Expenses** (`totalExpenses`) — sum of all records in `expense_entries` for the current user. Fixed expenses (rent, etc.) are stored as individual entries and treated as recurring each month. This field reflects `expense_entries` only.
+- **Loan EMIs** (`monthlyEmi`) — sum of `emi_amount` across all open loans.
+- **Cash Expenses** (`cashExpenses`) — sum of debit rows in `daily_transactions` for the current month. This is a **display-only** figure shown as "Cash Spent This Month" on the dashboard. It is intentionally excluded from the surplus formula because raw bank debits include transfers, investment purchases, and EMI payments that would cause double-counting.
+
+> **Why `cashExpenses` is not used in surplus:** `daily_transactions` are SMS-parsed bank debits. They capture every outflow from the bank account — including EMI payments already counted via `monthlyEmi` and investment transfers. Including them in the surplus would double-count those amounts.
+
+### Portfolio Current Value
+
+The dashboard fetches `stock_symbol` for each active holding and then calls the `/.netlify/functions/stock-price` Netlify function in parallel (one request per holding) to retrieve live market prices. If the function returns a valid price for a symbol it is used as the LTP; otherwise the holding's purchase price is used as a fallback. This means the "Current Value" and "Total Gain/Loss" cards on the dashboard always reflect the freshest available price on page load.
+
+```
+portfolioCurrentValue = Σ (quantity × LTP)          // LTP from stock-price function, fallback = purchase_price
+portfolioGainLoss     = portfolioCurrentValue − portfolioInvestedValue
+portfolioGainLossPct  = (portfolioGainLoss / portfolioInvestedValue) × 100
+```
+
+> **Note**: The dashboard uses the `stock-price` Netlify function directly rather than the `price_cache` database table. The backend scheduler still populates `price_cache` for the Investments page stale-price badge, but the dashboard summary card fetches prices live on every load.
+
+### Net Worth
+
+```
+Net Worth = Savings Balance − Outstanding Loan Principal
+```
+
+Portfolio current value is shown separately in the dashboard's portfolio summary row and is not included in the net worth figure.
+
+## Frontend Query Hooks
+
+The `frontend/src/api/dashboard.ts` module exports the following React Query hooks:
+
+| Hook | Description |
+|------|-------------|
+| `useDashboardSummary(month)` | Fetches the full dashboard summary for a given `YYYY-MM` month string. Refetches every 30 seconds. Returns income, expenses, surplus, net worth, savings balance, portfolio values, EMI total, PF amount, variable pay amount, and `cashExpenses` (display-only). |
+| `useCashFlow()` | Returns a month-by-month array of `{ month, income, expenses }` for the cash flow chart. Income excludes PF and Variable Pay entries. |
+| `useMonthlyDailyExpenses()` | Aggregates `daily_transactions` for the current month into `{ monthTotal, todayTotal, monthCredit, todayCredit }`. Refetches every 60 seconds. Used for the "Cash Spent This Month" display card. |
+| `useDailyChart()` | Returns a day-by-day array of `{ day, spent, received }` for the current month, filled for every day from the 1st to today. Sourced from `daily_transactions`. Refetches every 60 seconds. |
+| `useDashboardAlerts(month)` | Returns `{ budgetAlert, lowSurplusAlert, emiReminder, emiReminderLoanName }`. Refetches every 30 seconds. |
+
+> All hooks require an authenticated user (`useAuth`) and are disabled when `user.id` is not available.
+
 ## API Endpoints
 
 All endpoints are prefixed with `/api/v1`:
@@ -152,6 +201,54 @@ Use the free tier of Supabase or Railway PostgreSQL. Copy the connection string 
 ## Market Data Refresh
 
 The backend automatically refreshes stock prices every 15 minutes during Indian market hours (09:15–15:30 IST, Mon–Fri). You can also manually refresh from the frontend.
+
+## Netlify Functions (Frontend Serverless)
+
+When deployed to Netlify, the frontend uses serverless functions under `frontend/netlify/functions/` as a lightweight API layer. These are used instead of (or alongside) the Express backend for certain operations.
+
+### `stock-price` — Real-time Indian Stock Prices
+
+**Endpoint**: `GET /.netlify/functions/stock-price?symbol=<SYMBOL>`
+
+Fetches the current market price for an NSE/BSE-listed stock using the Yahoo Finance v8/v7 JSON APIs. No scraping — returns structured JSON. Tries NSE (`.NS` suffix) first, then falls back to BSE (`.BO` suffix).
+
+No API key is required.
+
+**How it works**
+
+1. Appends `.NS` to the symbol and calls the Yahoo Finance v8 chart endpoint (`query1.finance.yahoo.com/v8/finance/chart/…`). Reads `regularMarketPrice` from the `meta` object.
+2. If v8 returns a non-OK status, falls back to the Yahoo Finance v7 quote endpoint (`query2.finance.yahoo.com/v7/finance/quote?symbols=…`).
+3. If NSE yields no valid price, repeats steps 1–2 with the `.BO` suffix for BSE.
+
+**Query Parameters**
+
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `symbol` | Yes | Stock symbol without exchange suffix (e.g., `RELIANCE`, `INFY`, `TCS`) |
+
+**Success Response (200)**
+
+```json
+{
+  "symbol": "RELIANCE",
+  "ticker": "RELIANCE.NS",
+  "price": 2945.50,
+  "source": "yahoo-finance",
+  "timestamp": "2026-04-26T10:30:00.000Z"
+}
+```
+
+`ticker` shows the full Yahoo Finance symbol that returned a valid price (`.NS` or `.BO`).
+
+**Error Response (404)**
+
+```json
+{
+  "error": "Could not fetch live price for RELIANCE"
+}
+```
+
+Returned when both NSE and BSE lookups fail for the given symbol.
 
 ## Testing
 

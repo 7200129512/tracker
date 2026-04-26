@@ -20,6 +20,7 @@ export interface ExpenseEntry {
 export interface Loan {
   id: number;
   loanName: string;
+  loanType?: string;
   originalPrincipal: number;
   outstandingPrincipal: number;
   emiAmount: number;

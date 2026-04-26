@@ -1,0 +1,22 @@
+{
+  "enabled": true,
+  "name": "Update Docs on Source Change",
+  "description": "When source files are edited, ask the agent to update relevant documentation in README or /docs folder",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "*.ts",
+      "*.tsx",
+      "*.js",
+      "*.jsx",
+      "*.mjs",
+      "*.json",
+      "*.sql"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "A source file was just edited. Please review the change and update the relevant documentation. Check if there's a /docs folder and update files there, otherwise update the README.md if the change warrants documentation updates. Focus on API changes, new features, or significant refactoring that users/developers should know about."
+  }
+}
