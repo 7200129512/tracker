@@ -199,7 +199,7 @@ function InvestmentCard({ invested, current, gainLoss }: { invested: string; cur
       boxShadow: '0 1px 4px rgba(0,0,0,0.08)', borderLeft: '4px solid #3b82f6',
     }}>
       <div style={{ fontSize: 12, color: '#64748b', marginBottom: 6 }}>Total Invested / Current Value / Total Gain/Loss</div>
-      <div style={{ fontSize: 20, fontWeight: 700, color: '#1e293b' }}>{invested} / {current} / {gainLoss}</div>
+      <div style={{ fontSize: 16, fontWeight: 700, color: '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{invested} / {current} / {gainLoss}</div>
     </div>
   );
 }
