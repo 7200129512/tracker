@@ -94,7 +94,7 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Investment Breakdown */}
+      {/* Investment Summary */}
       {(() => {
         const invested  = portfolio?.investedValue  ?? summary?.portfolioInvestedValue ?? 0;
         const current   = portfolio?.currentValue   ?? summary?.portfolioCurrentValue  ?? 0;
@@ -102,23 +102,11 @@ export default function DashboardPage() {
         const gainPct   = portfolio?.gainLossPct    ?? 0;
         return (
           <div style={{ marginBottom: 16 }}>
-            <div style={{ fontSize: 13, fontWeight: 600, color: '#64748b', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              Investment Breakdown
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 12 }}>
-              <div style={{ background: '#fff', borderRadius: 10, padding: '14px 16px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', borderLeft: '4px solid #3b82f6' }}>
-                <div style={{ fontSize: 12, color: '#64748b', marginBottom: 2 }}>Total Invested</div>
-                <div style={{ fontSize: 18, fontWeight: 700, color: '#1e293b' }}>{formatINR(invested)}</div>
-              </div>
-              <div style={{ background: '#fff', borderRadius: 10, padding: '14px 16px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', borderLeft: '4px solid #8b5cf6' }}>
-                <div style={{ fontSize: 12, color: '#64748b', marginBottom: 2 }}>Current Value{portfolioLoading ? ' (updating…)' : ''}</div>
-                <div style={{ fontSize: 18, fontWeight: 700, color: '#1e293b' }}>{formatINR(current)}</div>
-              </div>
-              <div style={{ background: '#fff', borderRadius: 10, padding: '14px 16px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', borderLeft: `4px solid ${gain >= 0 ? '#22c55e' : '#ef4444'}` }}>
-                <div style={{ fontSize: 12, color: '#64748b', marginBottom: 2 }}>Total Gain/Loss</div>
-                <div style={{ fontSize: 18, fontWeight: 700, color: gain >= 0 ? '#22c55e' : '#ef4444' }}>{formatINR(gain)} ({gainPct.toFixed(2)}%)</div>
-              </div>
-            </div>
+            <InvestmentCard 
+              invested={formatINR(invested)}
+              current={formatINR(current)}
+              gainLoss={`${formatINR(gain)} (${gainPct.toFixed(2)}%)`}
+            />
           </div>
         );
       })()}
@@ -213,6 +201,18 @@ function IncomeCard({ salary, pf, variablePay }: { salary: string; pf: string; v
     }}>
       <div style={{ fontSize: 12, color: '#64748b', marginBottom: 6 }}>Salary / PF / Variable Pay</div>
       <div style={{ fontSize: 20, fontWeight: 700, color: '#1e293b' }}>{salary} / {pf} / {variablePay}</div>
+    </div>
+  );
+}
+
+function InvestmentCard({ invested, current, gainLoss }: { invested: string; current: string; gainLoss: string }) {
+  return (
+    <div style={{
+      background: '#fff', borderRadius: 10, padding: '16px 20px',
+      boxShadow: '0 1px 4px rgba(0,0,0,0.08)', borderLeft: '4px solid #3b82f6',
+    }}>
+      <div style={{ fontSize: 12, color: '#64748b', marginBottom: 6 }}>Total Invested / Current Value / Total Gain/Loss</div>
+      <div style={{ fontSize: 20, fontWeight: 700, color: '#1e293b' }}>{invested} / {current} / {gainLoss}</div>
     </div>
   );
 }
