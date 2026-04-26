@@ -12,8 +12,16 @@ export const useDashboardSummary = (month: string) => {
       if (!user?.id) throw new Error('User not authenticated');
 
       try {
-        // Fetch income entries for current user ONLY
-        const incomeRes = await supabaseClient.get(`/income_entries?user_id=eq.${user.id}&select=source_name,amount,frequency`);
+        // Get current month range
+        const now = new Date();
+        const monthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+        const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+        const monthEnd = nextMonth.toISOString().split('T')[0];
+
+        // Fetch income entries for current month only
+        const incomeRes = await supabaseClient.get(
+          `/income_entries?user_id=eq.${user.id}&effective_date=gte.${monthStart}&effective_date=lt.${monthEnd}&select=source_name,amount,frequency`
+        );
         
         // Calculate income: exclude PF and Variable Pay from monthly income
         let totalIncome = 0;
@@ -25,19 +33,18 @@ export const useDashboardSummary = (month: string) => {
           const sourceName = (row.source_name || '').toLowerCase();
           
           if (sourceName.includes('pf')) {
-            // Sum all PF entries (both one-time and monthly)
             pfAmount += amount;
           } else if (sourceName.includes('variable')) {
-            // Variable pay is tracked separately, not added to monthly income
             variablePayAmount = amount;
           } else {
-            // Include only base salary and other income
             totalIncome += amount;
           }
         });
 
-        // Fetch expense entries for current user ONLY
-        const expenseRes = await supabaseClient.get(`/expense_entries?user_id=eq.${user.id}&select=amount`);
+        // Fetch expense entries for current month only
+        const expenseRes = await supabaseClient.get(
+          `/expense_entries?user_id=eq.${user.id}&date=gte.${monthStart}&date=lt.${monthEnd}&select=amount`
+        );
         const totalExpenses = expenseRes.data.reduce((sum: number, row: any) => sum + parseFloat(row.amount || 0), 0);
 
         // Fetch loans for current user ONLY
