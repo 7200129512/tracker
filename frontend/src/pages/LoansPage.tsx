@@ -299,13 +299,10 @@ function LoanCard({
     : 0;
 
   const tenureMonths = (loan as any).tenureMonths || 0;
-  // Remaining months: use tenure - elapsed if tenure given, else estimate from outstanding/EMI
-  const elapsedMonths = tenureMonths > 0 && loan.emiStartDate
-    ? Math.floor((Date.now() - new Date(loan.emiStartDate).getTime()) / (1000 * 60 * 60 * 24 * 30))
+  // Remaining months: always calculate from outstanding / EMI (most accurate)
+  const remainingMonths = loan.emiAmount > 0
+    ? Math.ceil(loan.outstandingPrincipal / loan.emiAmount)
     : 0;
-  const remainingMonths = tenureMonths > 0
-    ? Math.max(tenureMonths - elapsedMonths, 0)
-    : (loan.emiAmount > 0 ? Math.ceil(loan.outstandingPrincipal / loan.emiAmount) : 0);
   const totalDuration = tenureMonths > 0 ? `${tenureMonths} months total` : '';
 
   return (
