@@ -10,7 +10,7 @@ import {
   useDeleteExpense,
 } from '../api/expenses';
 import type { ExpenseEntry } from '../types';
-import { formatINR, currentMonth } from '../utils/format';
+import { formatINR, formatMonth, currentMonth } from '../utils/format';
 
 const CATEGORIES: ExpenseEntry['category'][] = [
   'Rent', 'EMI', 'Food', 'Transport', 'Utilities', 'Entertainment', 'Other',
