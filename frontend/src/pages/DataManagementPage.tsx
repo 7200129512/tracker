@@ -80,21 +80,43 @@ interface ParsedRow {
   dayChg: number;
 }
 
-function normaliseHeader(h: string): string {
+function normaliseHeader(h: unknown): string {
+  if (h === null || h === undefined) return '';
   return h.toString().trim().toLowerCase().replace(/\s+/g, ' ');
 }
 
 function toNum(v: unknown): number {
   if (v === null || v === undefined || v === '') return 0;
+  // Handle numbers that Excel stores as actual numbers (not strings)
+  if (typeof v === 'number') return isNaN(v) ? 0 : v;
   const n = parseFloat(String(v).replace(/[^0-9.\-]/g, ''));
   return isNaN(n) ? 0 : n;
 }
 
-/** Parse a 2-D array of rows (first row = headers) into ParsedRow[] */
+/** Find the header row index — scans up to first 5 rows for one that contains
+ *  a known symbol-column keyword. Handles files where row 1 is blank or a title. */
+function findHeaderRowIndex(rawRows: unknown[][]): number {
+  const symbolKeys = new Set(
+    Object.entries(COL_MAP)
+      .filter(([, v]) => v === 'symbol')
+      .map(([k]) => k)
+  );
+  for (let i = 0; i < Math.min(5, rawRows.length); i++) {
+    const row = rawRows[i] as unknown[];
+    for (const cell of row) {
+      if (cell && symbolKeys.has(normaliseHeader(cell))) return i;
+    }
+  }
+  return 0; // fallback: assume first row is header
+}
+
+/** Parse a 2-D array of rows into ParsedRow[] — auto-detects header row */
 function parseRows(rawRows: unknown[][]): ParsedRow[] {
   if (rawRows.length < 2) return [];
 
-  const headers = (rawRows[0] as string[]).map(normaliseHeader);
+  const headerIdx = findHeaderRowIndex(rawRows);
+  const headers = (rawRows[headerIdx] as unknown[]).map(normaliseHeader);
+
   const colIndex: Record<string, number> = {};
   headers.forEach((h, i) => {
     const canonical = COL_MAP[h];
@@ -102,12 +124,12 @@ function parseRows(rawRows: unknown[][]): ParsedRow[] {
   });
 
   const results: ParsedRow[] = [];
-  for (let r = 1; r < rawRows.length; r++) {
+  for (let r = headerIdx + 1; r < rawRows.length; r++) {
     const row = rawRows[r] as unknown[];
     const get = (key: string) => (colIndex[key] !== undefined ? row[colIndex[key]] : undefined);
 
     const symbol = String(get('symbol') ?? '').trim();
-    if (!symbol) continue; // skip blank rows
+    if (!symbol || symbol === '0') continue; // skip blank / zero rows
 
     results.push({
       symbol,
@@ -200,8 +222,8 @@ export default function DataManagementPage() {
         await addHolding.mutateAsync({
           stockSymbol: row.symbol,
           stockName: row.symbol,
-          quantity: row.qty || 1,
-          purchasePrice: row.avgCost || row.ltp || 0,
+          quantity: row.qty,           // exact value from file — no fallback
+          purchasePrice: row.avgCost,  // exact avg cost from file
           purchaseDate: new Date().toISOString().slice(0, 10),
         });
         success++;

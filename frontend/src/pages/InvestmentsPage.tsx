@@ -138,7 +138,7 @@ export default function InvestmentsPage() {
                       }}
                     >
                       <td style={{ ...tdStyle, fontWeight: 600 }}>{h.stockSymbol}</td>
-                      <td style={tdStyle}>{h.quantity}</td>
+                      <td style={tdStyle}>{Number(h.quantity).toLocaleString('en-IN')}</td>
                       <td style={tdStyle}>{formatINR(h.purchasePrice)}</td>
                       <td style={tdStyle}>
                         {(h as HoldingWithPriceError).priceError ? (
