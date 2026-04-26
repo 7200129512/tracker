@@ -179,7 +179,6 @@ export const useDailyChart = () => {
   const today = new Date();
   const firstOfMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-01`;
   const todayStr = today.toISOString().split('T')[0];
-  const monthLabel = today.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
 
   return useQuery<{ day: string; spent: number; received: number }[]>({
     queryKey: ['daily-chart', user?.id, todayStr],
@@ -222,6 +221,8 @@ export const useDailyChart = () => {
     refetchInterval: 60000,
   });
 };
+
+export const useDashboardAlerts = (month: string) => {
   const { user } = useAuth();
 
   return useQuery<DashboardAlerts>({
