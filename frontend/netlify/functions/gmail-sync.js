@@ -156,6 +156,27 @@ function parseTransactionEmail(text, emailDate) {
   else if (/hospital|medical|pharmacy|doctor|health|apollo|clinic/i.test(textLower)) result.category = 'Healthcare';
   else if (/rent|maintenance|society|housing/i.test(textLower)) result.category = 'Rent';
 
+  // Parse date from email body — handles: 26-Apr-26, 04-04-26, 26/04/2026, 04-04-2026
+  const monthMap = { jan:'01',feb:'02',mar:'03',apr:'04',may:'05',jun:'06',jul:'07',aug:'08',sep:'09',oct:'10',nov:'11',dec:'12' };
+  const datePatterns = [
+    /(\d{1,2})[\/\-](\w{3})[\/\-](\d{2,4})/,   // 26-Apr-26 or 26-Apr-2026
+    /(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/,  // 04-04-26 or 26/04/2026
+  ];
+  for (const p of datePatterns) {
+    const m = text.match(p);
+    if (m) {
+      const day = m[1].padStart(2, '0');
+      const rawMonth = m[2];
+      const month = isNaN(Number(rawMonth))
+        ? (monthMap[rawMonth.toLowerCase()] || '01')
+        : rawMonth.padStart(2, '0');
+      let year = m[3];
+      if (year.length === 2) year = '20' + year;
+      result.date = `${year}-${month}-${day}`;
+      break;
+    }
+  }
+
   return result;
 }
 
@@ -297,6 +318,9 @@ exports.handler = async (event) => {
     const saved = await saveTransactions(userId, toSave);
     await updateLastSync(userId);
 
+    // Build summary of what was saved for debugging
+    const savedDates = toSave.map(t => `${t.merchant} ₹${t.amount} on ${t.date}`).join(', ');
+
     return {
       statusCode: 200,
       headers,
@@ -308,6 +332,7 @@ exports.handler = async (event) => {
         message: saved > 0
           ? `✅ Saved ${saved} new transaction${saved > 1 ? 's' : ''} from this month`
           : 'No new transactions found.',
+        debug: savedDates || 'nothing to save',
       }),
     };
   } catch (err) {
