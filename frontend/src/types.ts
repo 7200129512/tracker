@@ -99,6 +99,7 @@ export interface DashboardSummary {
   savingsBalance: number;
   pfAmount?: number;
   variablePayAmount?: number;
+  cashExpenses?: number;
 }
 
 export interface CashFlowPoint {

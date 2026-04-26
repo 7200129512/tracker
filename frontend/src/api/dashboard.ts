@@ -41,16 +41,30 @@ export const useDashboardSummary = (month: string) => {
           }
         });
 
-        // Fetch expense entries for current month only
+        // Fetch expense entries — include ALL fixed/variable expenses regardless of date
+        // (Fixed expenses like rent, internet are recurring every month)
         const expenseRes = await supabaseClient.get(
-          `/expense_entries?user_id=eq.${user.id}&date=gte.${monthStart}&date=lt.${monthEnd}&select=amount`
+          `/expense_entries?user_id=eq.${user.id}&select=amount,type,category`
         );
+        // Sum all fixed expenses (they recur monthly) + variable expenses entered this month
         const totalExpenses = expenseRes.data.reduce((sum: number, row: any) => sum + parseFloat(row.amount || 0), 0);
 
         // Fetch loans for current user ONLY
         const loanRes = await supabaseClient.get(`/loans?user_id=eq.${user.id}&select=outstanding_principal,emi_amount&is_closed=eq.false`);
         const outstandingLoanPrincipal = loanRes.data.reduce((sum: number, row: any) => sum + parseFloat(row.outstanding_principal || 0), 0);
         const monthlyEmi = loanRes.data.reduce((sum: number, row: any) => sum + parseFloat(row.emi_amount || 0), 0);
+
+        // Fetch cash/daily expenses for current month from daily_transactions
+        const { supabase } = await import('./auth');
+        const { data: dailyData } = await supabase
+          .from('daily_transactions')
+          .select('amount, type')
+          .eq('user_id', user.id)
+          .gte('date', monthStart)
+          .lt('date', monthEnd);
+        const cashExpenses = (dailyData || [])
+          .filter((r: any) => r.type === 'debit')
+          .reduce((sum: number, r: any) => sum + Number(r.amount), 0);
 
         // Fetch investments for current user ONLY
         const investRes = await supabaseClient.get(`/investment_holdings?user_id=eq.${user.id}&is_closed=eq.false&select=quantity,purchase_price`);
@@ -63,13 +77,15 @@ export const useDashboardSummary = (month: string) => {
           return row.type === 'Deposit' ? sum + amount : sum - amount;
         }, 0);
 
-        const monthlySurplus = totalIncome - totalExpenses;
+        // Monthly Surplus = Income - Fixed Expenses - EMI - Cash Spent this month
+        const totalDeductions = totalExpenses + monthlyEmi + cashExpenses;
+        const monthlySurplus = totalIncome - totalDeductions;
         const savingsRate = totalIncome > 0 ? (monthlySurplus / totalIncome) * 100 : 0;
         const netWorth = savingsBalance - outstandingLoanPrincipal;
 
         return {
           totalIncome: parseFloat(totalIncome.toFixed(2)),
-          totalExpenses: parseFloat(totalExpenses.toFixed(2)),
+          totalExpenses: parseFloat(totalDeductions.toFixed(2)),   // full deductions: fixed + EMI + cash
           monthlySurplus: parseFloat(monthlySurplus.toFixed(2)),
           savingsRate: parseFloat(savingsRate.toFixed(2)),
           netWorth: parseFloat(netWorth.toFixed(2)),
@@ -82,6 +98,7 @@ export const useDashboardSummary = (month: string) => {
           monthlyEmi: parseFloat(monthlyEmi.toFixed(2)),
           pfAmount: parseFloat(pfAmount.toFixed(2)),
           variablePayAmount: parseFloat(variablePayAmount.toFixed(2)),
+          cashExpenses: parseFloat(cashExpenses.toFixed(2)),
         };
       } catch (error) {
         console.error('Dashboard error:', error);
