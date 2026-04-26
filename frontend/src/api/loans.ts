@@ -81,11 +81,10 @@ export const useAddLoan = () => {
   const qc = useQueryClient();
   
   return useMutation({
-    mutationFn: (data: Omit<Loan, 'id' | 'remainingInstalments' | 'estimatedClosureDate'>) => {
+    mutationFn: async (data: Omit<Loan, 'id' | 'remainingInstalments' | 'estimatedClosureDate'>) => {
       if (!user?.id) throw new Error('User not authenticated');
       
-      // Convert camelCase to snake_case for database
-      const payload = {
+      const payload: any = {
         loan_name: data.loanName,
         loan_type: (data as any).loanType || 'Other',
         original_principal: data.originalPrincipal,
@@ -96,13 +95,12 @@ export const useAddLoan = () => {
         user_id: user.id,
       };
 
-      // Try with loan_type; if 400 (column missing), retry without it
       try {
         return await supabaseClient.post('/loans', payload);
       } catch (err: any) {
-        if (err?.response?.status === 400) {
-          const { loan_type, ...payloadWithoutType } = payload;
-          return supabaseClient.post('/loans', payloadWithoutType);
+        if (err?.response?.status === 400 && payload.loan_type) {
+          delete payload.loan_type;
+          return supabaseClient.post('/loans', payload);
         }
         throw err;
       }
@@ -116,13 +114,11 @@ export const useUpdateLoan = () => {
   const qc = useQueryClient();
   
   return useMutation({
-    mutationFn: ({ id, ...data }: Partial<Loan> & { id: number }) => {
+    mutationFn: async ({ id, ...data }: Partial<Loan> & { id: number }) => {
       if (!user?.id) throw new Error('User not authenticated');
       
-      // Convert camelCase to snake_case for database
       const payload: any = {};
       if (data.loanName) payload.loan_name = data.loanName;
-      // loan_type is optional — only send if column exists
       if ((data as any).loanType) payload.loan_type = (data as any).loanType;
       if (data.originalPrincipal !== undefined) payload.original_principal = data.originalPrincipal;
       if (data.outstandingPrincipal !== undefined) payload.outstanding_principal = data.outstandingPrincipal;
@@ -131,7 +127,6 @@ export const useUpdateLoan = () => {
       if (data.emiStartDate) payload.emi_start_date = data.emiStartDate;
       if (data.isClosed !== undefined) payload.is_closed = data.isClosed;
 
-      // Try with loan_type first; if 400, retry without it
       try {
         return await supabaseClient.patch(`/loans?id=eq.${id}&user_id=eq.${user.id}`, payload);
       } catch (err: any) {
