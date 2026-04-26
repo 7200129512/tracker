@@ -60,10 +60,9 @@ export default function DashboardPage() {
       </div>
 
       {/* Row 3 — Obligations */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16, marginBottom: 16 }}>
         <Card label="Fixed Expenses (Rent etc.)" value={formatINR(summary?.totalExpenses ?? 0)} color="#ef4444" />
         <Card label="Bank Debits (This Month)" value={formatINR(summary?.cashExpenses ?? 0)} color="#94a3b8" />
-        <Card label="Total Loan Outstanding" value={formatINR(summary?.outstandingLoanPrincipal ?? 0)} color="#be123c" />
       </div>
 
       {/* Loan breakdown — one card per active loan */}
