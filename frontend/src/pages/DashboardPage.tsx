@@ -51,7 +51,7 @@ export default function DashboardPage() {
         <Card label="Monthly Income" value={formatINR(summary?.totalIncome ?? 0)} color="#22c55e" />
         <Card label="Monthly PF" value={formatINR(summary?.pfAmount ?? 0)} color="#8b5cf6" />
         <Card label="Annual Variable Pay" value={formatINR(summary?.variablePayAmount ?? 0)} color="#f59e0b" />
-        <Card label="Monthly Expenses" value={formatINR(summary?.totalExpenses ?? 0)} color="#ef4444" />
+        <Card label="Cash Expenses" value={formatINR(summary?.totalExpenses ?? 0)} color="#ef4444" />
       </div>
 
       {/* Row 3 — Surplus and loan */}
