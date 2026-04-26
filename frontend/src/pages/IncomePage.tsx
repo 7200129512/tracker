@@ -56,7 +56,7 @@ export default function IncomePage() {
     });
   };
 
-  // Calculate income breakdown based on source name
+  // Calculate income breakdown based on source name and frequency
   const getIncomeType = (sourceName: string | undefined): string => {
     if (!sourceName) return 'other';
     const lower = sourceName.toLowerCase();
@@ -66,11 +66,25 @@ export default function IncomePage() {
     return 'other';
   };
 
-  const baseIncome = entries.find(e => getIncomeType(e.sourceName) === 'base')?.amount || 0;
-  const variableIncome = entries.find(e => getIncomeType(e.sourceName) === 'variable')?.amount || 0;
-  const pfIncome = entries.find(e => getIncomeType(e.sourceName) === 'pf')?.amount || 0;
-  const otherIncome = entries.filter(e => !['base', 'variable', 'pf'].includes(getIncomeType(e.sourceName))).reduce((s, e) => s + e.amount, 0);
-  const totalMonthly = baseIncome + otherIncome; // PF and Variable Pay are NOT added to monthly income
+  // Only include monthly entries for base income
+  const baseIncome = entries.find(e => getIncomeType(e.sourceName) === 'base' && e.frequency === 'monthly')?.amount || 0;
+  
+  // Sum all PF entries (can be monthly or one-time)
+  const pfIncome = entries.filter(e => getIncomeType(e.sourceName) === 'pf').reduce((sum, e) => sum + e.amount, 0);
+  
+  // Only include annual variable pay
+  const variableIncome = entries.find(e => getIncomeType(e.sourceName) === 'variable' && e.frequency === 'annual')?.amount || 0;
+  
+  // Other monthly income (excluding base, pf, and variable)
+  const otherIncome = entries
+    .filter(e => {
+      const type = getIncomeType(e.sourceName);
+      return !['base', 'variable', 'pf'].includes(type) && e.frequency === 'monthly';
+    })
+    .reduce((s, e) => s + e.amount, 0);
+  
+  // Total monthly = base + other (NOT including PF or Variable Pay)
+  const totalMonthly = baseIncome + otherIncome;
 
   return (
     <div>
