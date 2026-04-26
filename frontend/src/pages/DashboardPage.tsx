@@ -38,26 +38,26 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Row 1 — Daily expense tracking */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
+      {/* Row 1 — Income */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 16 }}>
+        <Card label="Monthly Income" value={formatINR(summary?.totalIncome ?? 0)} color="#22c55e" />
+        <Card label="Monthly PF" value={formatINR(summary?.pfAmount ?? 0)} color="#8b5cf6" />
+        <Card label="Annual Variable Pay" value={formatINR(summary?.variablePayAmount ?? 0)} color="#f59e0b" />
+        <Card label="Monthly Surplus" value={formatINR(surplus)} color={surplus < 0 ? '#ef4444' : '#3b82f6'} highlight={surplus < 0} />
+      </div>
+
+      {/* Row 2 — Daily bank tracking */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 16 }}>
         <Card label={`Daily Spent (${todayLabel})`} value={formatINR(dailyExp?.todayTotal ?? 0)} color="#f97316" />
         <Card label={`Monthly Spent (${formatMonth(month)})`} value={formatINR(dailyExp?.monthTotal ?? 0)} color="#dc2626" />
         <Card label={`Daily Received (${todayLabel})`} value={formatINR(dailyExp?.todayCredit ?? 0)} color="#22c55e" />
         <Card label={`Monthly Received (${formatMonth(month)})`} value={formatINR(dailyExp?.monthCredit ?? 0)} color="#16a34a" />
       </div>
 
-      {/* Row 2 — Income summary */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
-        <Card label="Monthly Income" value={formatINR(summary?.totalIncome ?? 0)} color="#22c55e" />
-        <Card label="Monthly PF" value={formatINR(summary?.pfAmount ?? 0)} color="#8b5cf6" />
-        <Card label="Annual Variable Pay" value={formatINR(summary?.variablePayAmount ?? 0)} color="#f59e0b" />
+      {/* Row 3 — Obligations */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 24 }}>
         <Card label="Cash Expenses" value={formatINR(summary?.totalExpenses ?? 0)} color="#ef4444" />
-      </div>
-
-      {/* Row 3 — Surplus and loan */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
-        <Card label="Monthly Surplus" value={formatINR(surplus)} color={surplus < 0 ? '#ef4444' : '#3b82f6'} highlight={surplus < 0} />
-        <Card label="Loan Outstanding" value={formatINR(summary?.outstandingLoanPrincipal ?? 0)} color="#ef4444" />
+        <Card label="Loan Outstanding" value={formatINR(summary?.outstandingLoanPrincipal ?? 0)} color="#be123c" />
         <Card label="Monthly EMI" value={formatINR(summary?.monthlyEmi ?? 0)} color="#f97316" />
       </div>
 
