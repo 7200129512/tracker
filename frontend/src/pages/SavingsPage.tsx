@@ -51,7 +51,9 @@ export default function SavingsPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        setFetchError(data.error || 'Failed to fetch balance');
+        const msg = data.error || 'Failed to fetch balance';
+        const debug = data.debug ? ` (${data.debug})` : '';
+        setFetchError(msg + debug);
         return;
       }
 

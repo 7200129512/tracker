@@ -118,7 +118,10 @@ exports.handler = async (event) => {
     return {
       statusCode: 404,
       headers,
-      body: JSON.stringify({ error: 'Could not extract balance from recent bank emails. Balance pattern not found.' }),
+      body: JSON.stringify({
+        error: 'Could not extract balance from recent bank emails. Balance pattern not found.',
+        debug: `Found ${messages.length} bank email(s). Try forwarding a recent HDFC transaction SMS/email to check the format.`,
+      }),
     };
 
   } catch (err) {
@@ -159,30 +162,57 @@ function extractText(message) {
 }
 
 function extractBalance(text) {
-  // Patterns ordered by specificity — most reliable first
+  // Normalise — remove extra spaces, make consistent
+  const t = text.replace(/\s+/g, ' ');
+
+  // Patterns ordered by specificity — covers HDFC, SBI, ICICI, Axis, Kotak
   const patterns = [
-    // HDFC: "Avl Bal: Rs.45,230.50" or "Avl Bal:INR 45,230.50"
-    /[Aa]vl\.?\s*[Bb]al(?:ance)?[:\s]+(?:Rs\.?|INR|₹)\s*([\d,]+(?:\.\d{1,2})?)/,
-    // "Available Balance: INR 45,230.50" or "Available Bal: Rs 45,230"
-    /[Aa]vailable\s+[Bb]al(?:ance)?[:\s]+(?:Rs\.?|INR|₹)\s*([\d,]+(?:\.\d{1,2})?)/,
-    // "Bal: Rs 45,230.50"
-    /\bBal[:\s]+(?:Rs\.?|INR|₹)\s*([\d,]+(?:\.\d{1,2})?)/,
+    // HDFC: "Avl Bal: Rs.45,230.50" / "Avl Bal:INR 45,230.50" / "Avl Bal- Rs 45230.50"
+    /[Aa]vl\.?\s*[Bb]al(?:ance)?[\s:\-]+(?:Rs\.?|INR|₹)?\s*([\d,]+(?:\.\d{1,2})?)/,
+    // "Available Balance: INR 45,230.50" / "Available Bal Rs 45,230"
+    /[Aa]vailable\s+[Bb]al(?:ance)?[\s:\-]+(?:Rs\.?|INR|₹)?\s*([\d,]+(?:\.\d{1,2})?)/,
+    // "Bal: Rs 45,230.50" / "Bal INR 45230"
+    /\bBal(?:ance)?[\s:\-]+(?:Rs\.?|INR|₹)?\s*([\d,]+(?:\.\d{1,2})?)/,
     // "balance is Rs 45,230.50"
-    /balance\s+is\s+(?:Rs\.?|INR|₹)\s*([\d,]+(?:\.\d{1,2})?)/i,
+    /balance\s+is\s+(?:Rs\.?|INR|₹)?\s*([\d,]+(?:\.\d{1,2})?)/i,
     // "Closing Balance: 45,230.50"
-    /[Cc]losing\s+[Bb]alance[:\s]+(?:Rs\.?|INR|₹)?\s*([\d,]+(?:\.\d{1,2})?)/,
-    // Generic: ₹45,230.50 near "balance"
-    /balance[^₹\d]{0,20}₹\s*([\d,]+(?:\.\d{1,2})?)/i,
+    /[Cc]losing\s+[Bb]al(?:ance)?[\s:\-]+(?:Rs\.?|INR|₹)?\s*([\d,]+(?:\.\d{1,2})?)/,
+    // "Ledger Balance: 45,230.50"
+    /[Ll]edger\s+[Bb]al(?:ance)?[\s:\-]+(?:Rs\.?|INR|₹)?\s*([\d,]+(?:\.\d{1,2})?)/,
+    // HDFC specific: "A/c balance Rs.45,230.50"
+    /[Aa]\/c\s+[Bb]al(?:ance)?[\s:\-]+(?:Rs\.?|INR|₹)?\s*([\d,]+(?:\.\d{1,2})?)/,
+    // "Rs.45,230.50 is the balance" or "INR 45,230.50 balance"
+    /(?:Rs\.?|INR|₹)\s*([\d,]+(?:\.\d{1,2})?)\s+(?:is\s+(?:the\s+)?)?[Bb]al(?:ance)?/,
+    // Generic ₹ amount near "bal" within 30 chars
+    /[Bb]al[^₹\d]{0,30}(?:Rs\.?|INR|₹)\s*([\d,]+(?:\.\d{1,2})?)/,
+    /(?:Rs\.?|INR|₹)\s*([\d,]+(?:\.\d{1,2})?)[^a-zA-Z]{0,30}[Bb]al/,
   ];
 
   for (const pattern of patterns) {
-    const match = text.match(pattern);
+    const match = t.match(pattern);
     if (match) {
       const num = parseFloat(match[1].replace(/,/g, ''));
-      if (!isNaN(num) && num > 0 && num < 100000000) { // sanity: < 10 crore
+      if (!isNaN(num) && num > 100 && num < 100000000) { // sanity: ₹100 to ₹10 crore
         return num;
       }
     }
   }
+
+  // Last resort: find ALL ₹/Rs amounts in the email and return the largest
+  // (bank balance is usually the largest number in a transaction alert)
+  const allAmounts = [];
+  const amountPattern = /(?:Rs\.?|INR|₹)\s*([\d,]+(?:\.\d{1,2})?)/g;
+  let m;
+  while ((m = amountPattern.exec(t)) !== null) {
+    const num = parseFloat(m[1].replace(/,/g, ''));
+    if (!isNaN(num) && num > 100 && num < 100000000) {
+      allAmounts.push(num);
+    }
+  }
+  // Return the largest amount — in a debit alert, the balance is usually the biggest number
+  if (allAmounts.length > 0) {
+    return Math.max(...allAmounts);
+  }
+
   return null;
 }
