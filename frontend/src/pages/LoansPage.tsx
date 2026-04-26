@@ -102,21 +102,16 @@ export default function LoansPage() {
 
   return (
     <div>
-      <h2 style={{ marginBottom: 20, color: '#1e293b' }}>Loans</h2>
+      <h2 className="page-heading">Loans</h2>
 
-      {/* ── Summary cards ─────────────────────────────────────────────────── */}
-      <div style={{ 
-        display: 'grid', 
-        gridTemplateColumns: window.innerWidth < 768 ? '1fr' : 'repeat(3, 1fr)', 
-        gap: window.innerWidth < 768 ? 12 : 16, 
-        marginBottom: 20 
-      }}>
+      {/* Summary cards */}
+      <div className="loans-summary-grid">
         <SummaryCard label="Total Outstanding" value={formatINR(totalOutstanding)} color="#ef4444" />
         <SummaryCard label="Total Monthly EMI" value={formatINR(totalEmi)} color="#f97316" />
         <SummaryCard label="Active Loans" value={`${activeLoans.length}`} color="#3b82f6" />
       </div>
 
-      {/* ── Add / Edit form ────────────────────────────────────────────────── */}
+      {/* Add / Edit form */}
       <div style={cardStyle}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: showForm ? 16 : 0 }}>
           <h3 style={{ margin: 0 }}>{editId ? 'Edit Loan' : 'Add New Loan'}</h3>
@@ -150,6 +145,8 @@ export default function LoansPage() {
                       cursor: 'pointer',
                       fontSize: 13,
                       fontWeight: form.loanType === t ? 600 : 400,
+                      minHeight: 'auto',
+                      minWidth: 'auto',
                     }}
                   >
                     {LOAN_TYPE_ICONS[t]} {t}
@@ -159,73 +156,48 @@ export default function LoansPage() {
             </div>
 
             {/* Fields */}
-            <div style={{ 
-              display: 'grid', 
-              gridTemplateColumns: window.innerWidth < 768 ? '1fr' : 'repeat(auto-fill, minmax(200px, 1fr))', 
-              gap: 12 
-            }}>
+            <div className="loans-form-grid">
               <div style={fieldGroup}>
                 <label style={labelStyle}>Loan Name / Bank</label>
-                <input
-                  placeholder="e.g. HDFC Car Loan"
-                  value={form.loanName}
+                <input placeholder="e.g. HDFC Car Loan" value={form.loanName}
                   onChange={(e) => setForm({ ...form, loanName: e.target.value })}
-                  required
-                  style={inputStyle}
-                />
+                  required style={inputStyle} />
               </div>
               <div style={fieldGroup}>
                 <label style={labelStyle}>Original Principal (₹)</label>
-                <input
-                  type="number" placeholder="e.g. 500000"
-                  value={form.originalPrincipal || ''}
+                <input type="number" placeholder="e.g. 500000" value={form.originalPrincipal || ''}
                   onChange={(e) => setForm({ ...form, originalPrincipal: Number(e.target.value) })}
-                  required min={1} style={inputStyle}
-                />
+                  required min={1} style={inputStyle} />
               </div>
               <div style={fieldGroup}>
                 <label style={labelStyle}>Outstanding Balance (₹)</label>
-                <input
-                  type="number" placeholder="e.g. 350000"
-                  value={form.outstandingPrincipal || ''}
+                <input type="number" placeholder="e.g. 350000" value={form.outstandingPrincipal || ''}
                   onChange={(e) => setForm({ ...form, outstandingPrincipal: Number(e.target.value) })}
-                  required min={0} style={inputStyle}
-                />
+                  required min={0} style={inputStyle} />
               </div>
               <div style={fieldGroup}>
                 <label style={labelStyle}>Monthly EMI (₹)</label>
-                <input
-                  type="number" placeholder="e.g. 12000"
-                  value={form.emiAmount || ''}
+                <input type="number" placeholder="e.g. 12000" value={form.emiAmount || ''}
                   onChange={(e) => setForm({ ...form, emiAmount: Number(e.target.value) })}
-                  required min={1} style={inputStyle}
-                />
+                  required min={1} style={inputStyle} />
               </div>
               <div style={fieldGroup}>
                 <label style={labelStyle}>Interest Rate % p.a.</label>
-                <input
-                  type="number" placeholder="e.g. 9.5"
-                  value={form.interestRatePa || ''}
+                <input type="number" placeholder="e.g. 9.5" value={form.interestRatePa || ''}
                   onChange={(e) => setForm({ ...form, interestRatePa: Number(e.target.value) })}
-                  required min={0} step={0.01} style={inputStyle}
-                />
+                  required min={0} step={0.01} style={inputStyle} />
               </div>
               <div style={fieldGroup}>
                 <label style={labelStyle}>Tenure (months)</label>
-                <input
-                  type="number" placeholder="e.g. 60"
-                  value={form.tenureMonths || ''}
+                <input type="number" placeholder="e.g. 60" value={form.tenureMonths || ''}
                   onChange={(e) => setForm({ ...form, tenureMonths: Number(e.target.value) })}
-                  min={1} style={inputStyle}
-                />
+                  min={1} style={inputStyle} />
               </div>
               <div style={fieldGroup}>
                 <label style={labelStyle}>EMI Start Date</label>
-                <input
-                  type="date" value={form.emiStartDate}
+                <input type="date" value={form.emiStartDate}
                   onChange={(e) => setForm({ ...form, emiStartDate: e.target.value })}
-                  required style={inputStyle}
-                />
+                  required style={inputStyle} />
               </div>
             </div>
 
@@ -243,52 +215,38 @@ export default function LoansPage() {
         )}
       </div>
 
-      {/* ── Active Loans ───────────────────────────────────────────────────── */}
+      {/* Active Loans */}
       {isLoading ? (
         <p style={{ marginTop: 16, color: '#94a3b8' }}>Loading…</p>
       ) : activeLoans.length === 0 ? (
-        <div style={{ ...cardStyle, marginTop: 16, textAlign: 'center', padding: '32px 20px', color: '#94a3b8' }}>
+        <div style={{ ...cardStyle, textAlign: 'center', padding: '32px 20px', color: '#94a3b8' }}>
           No active loans. Click "+ Add Loan" to add one.
         </div>
       ) : (
         <>
           <h3 style={{ marginTop: 24, marginBottom: 12, color: '#1e293b' }}>Active Loans</h3>
-          <div style={{ 
-            display: 'grid', 
-            gridTemplateColumns: window.innerWidth < 768 ? '1fr' : 'repeat(auto-fill, minmax(320px, 1fr))', 
-            gap: 16 
-          }}>
+          <div className="loans-cards-grid">
             {activeLoans.map((loan) => (
-              <LoanCard
-                key={loan.id}
-                loan={loan}
+              <LoanCard key={loan.id} loan={loan}
                 onEdit={() => startEdit(loan)}
                 onDelete={() => deleteLoan.mutate(loan.id)}
-                onClose={() => handleMarkClosed(loan)}
-              />
+                onClose={() => handleMarkClosed(loan)} />
             ))}
           </div>
         </>
       )}
 
-      {/* ── Closed Loans ──────────────────────────────────────────────────── */}
+      {/* Closed Loans */}
       {closedLoans.length > 0 && (
         <>
           <h3 style={{ marginTop: 28, marginBottom: 12, color: '#64748b' }}>Closed Loans</h3>
-          <div style={{ 
-            display: 'grid', 
-            gridTemplateColumns: window.innerWidth < 768 ? '1fr' : 'repeat(auto-fill, minmax(320px, 1fr))', 
-            gap: 16 
-          }}>
+          <div className="loans-cards-grid">
             {closedLoans.map((loan) => (
-              <LoanCard
-                key={loan.id}
-                loan={loan}
+              <LoanCard key={loan.id} loan={loan}
                 onEdit={() => startEdit(loan)}
                 onDelete={() => deleteLoan.mutate(loan.id)}
                 onClose={() => {}}
-                closed
-              />
+                closed />
             ))}
           </div>
         </>
@@ -307,7 +265,6 @@ function LoanCard({
   onClose: () => void;
   closed?: boolean;
 }) {
-  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
   const loanType = ((loan as any).loanType || 'Other') as LoanType;
   const color = LOAN_TYPE_COLORS[loanType] || '#64748b';
   const icon  = LOAN_TYPE_ICONS[loanType]  || '📋';
@@ -317,7 +274,6 @@ function LoanCard({
     : 0;
 
   const tenureMonths = (loan as any).tenureMonths || 0;
-  // Remaining months: always calculate from outstanding / EMI (most accurate)
   const remainingMonths = loan.emiAmount > 0
     ? Math.ceil(loan.outstandingPrincipal / loan.emiAmount)
     : 0;
@@ -325,58 +281,43 @@ function LoanCard({
 
   return (
     <div style={{
-      background: '#fff', 
-      borderRadius: 12, 
-      padding: isMobile ? '16px' : '20px',
+      background: '#fff',
+      borderRadius: 12,
+      padding: 16,
       boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
       borderTop: `4px solid ${closed ? '#94a3b8' : color}`,
       opacity: closed ? 0.7 : 1,
     }}>
       {/* Header */}
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'flex-start', 
-        marginBottom: 12,
-        flexDirection: isMobile ? 'column' : 'row',
-        gap: isMobile ? 8 : 0
-      }}>
-        <div style={{ flex: 1 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12, gap: 8 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4, flexWrap: 'wrap' }}>
             <span style={{
               background: closed ? '#f1f5f9' : `${color}20`,
               color: closed ? '#94a3b8' : color,
-              borderRadius: 6, 
-              padding: '2px 8px', 
-              fontSize: isMobile ? 11 : 12, 
-              fontWeight: 600,
+              borderRadius: 6, padding: '2px 8px', fontSize: 12, fontWeight: 600,
             }}>
               {icon} {loanType}
             </span>
-            {closed && <span style={{ 
-              background: '#22c55e', 
-              color: '#fff', 
-              borderRadius: 4, 
-              padding: '2px 8px', 
-              fontSize: isMobile ? 10 : 11 
-            }}>CLOSED</span>}
+            {closed && (
+              <span style={{ background: '#22c55e', color: '#fff', borderRadius: 4, padding: '2px 8px', fontSize: 11 }}>
+                CLOSED
+              </span>
+            )}
           </div>
-          <h3 style={{ margin: 0, fontSize: isMobile ? 14 : 16, color: '#1e293b' }}>{loan.loanName}</h3>
+          <h3 style={{ margin: 0, fontSize: 15, color: '#1e293b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {loan.loanName}
+          </h3>
         </div>
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
           {!closed && <button onClick={onEdit} style={smallBtn('#3b82f6')}>Edit</button>}
           {!closed && <button onClick={onClose} style={smallBtn('#22c55e')}>Close</button>}
-          <button onClick={onDelete} style={smallBtn('#ef4444')}>Delete</button>
+          <button onClick={onDelete} style={smallBtn('#ef4444')}>Del</button>
         </div>
       </div>
 
       {/* Key figures */}
-      <div style={{ 
-        display: 'grid', 
-        gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', 
-        gap: 10, 
-        marginBottom: 14 
-      }}>
+      <div className="loan-stats-grid">
         <Stat label="Outstanding" value={formatINR(loan.outstandingPrincipal)} color={color} />
         <Stat label="Monthly EMI" value={formatINR(loan.emiAmount)} color="#f97316" />
         <Stat label="Interest Rate" value={`${loan.interestRatePa}% p.a.`} color="#8b5cf6" />
@@ -389,16 +330,8 @@ function LoanCard({
 
       {/* Progress bar */}
       {!closed && (
-        <div>
-          <div style={{ 
-            display: 'flex', 
-            justifyContent: 'space-between', 
-            fontSize: isMobile ? 10 : 11, 
-            color: '#94a3b8', 
-            marginBottom: 4,
-            flexDirection: isMobile ? 'column' : 'row',
-            gap: isMobile ? 2 : 0
-          }}>
+        <div style={{ marginTop: 12 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#94a3b8', marginBottom: 4 }}>
             <span>Repaid {repaidPct.toFixed(1)}%</span>
             <span>{totalDuration || `~${remainingMonths} months left`}</span>
           </div>
@@ -412,35 +345,47 @@ function LoanCard({
 }
 
 function Stat({ label, value, color }: { label: string; value: string; color: string }) {
-  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
   return (
-    <div style={{ background: '#f8fafc', borderRadius: 8, padding: isMobile ? '6px 10px' : '8px 12px' }}>
-      <div style={{ fontSize: isMobile ? 10 : 11, color: '#94a3b8', marginBottom: 2 }}>{label}</div>
-      <div style={{ fontSize: isMobile ? 12 : 14, fontWeight: 700, color }}>{value}</div>
+    <div style={{ background: '#f8fafc', borderRadius: 8, padding: '8px 10px' }}>
+      <div style={{ fontSize: 11, color: '#94a3b8', marginBottom: 2 }}>{label}</div>
+      <div style={{ fontSize: 13, fontWeight: 700, color }}>{value}</div>
     </div>
   );
 }
 
 function SummaryCard({ label, value, color }: { label: string; value: string; color: string }) {
-  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
   return (
-    <div style={{ 
-      background: '#fff', 
-      borderRadius: 10, 
-      padding: isMobile ? '12px 16px' : '16px 20px', 
-      boxShadow: '0 1px 4px rgba(0,0,0,0.08)', 
-      borderLeft: `4px solid ${color}` 
+    <div style={{
+      background: '#fff', borderRadius: 10, padding: '14px 18px',
+      boxShadow: '0 1px 4px rgba(0,0,0,0.08)', borderLeft: `4px solid ${color}`,
     }}>
       <div style={{ fontSize: 12, color: '#64748b', marginBottom: 4 }}>{label}</div>
-      <div style={{ fontSize: isMobile ? 18 : 22, fontWeight: 700, color: '#1e293b' }}>{value}</div>
+      <div style={{ fontSize: 20, fontWeight: 700, color: '#1e293b' }}>{value}</div>
     </div>
   );
 }
 
 // ── Styles ────────────────────────────────────────────────────────────────────
-const cardStyle: React.CSSProperties = { background: '#fff', borderRadius: 10, padding: 20, boxShadow: '0 1px 4px rgba(0,0,0,0.08)', marginTop: 16 };
-const inputStyle: React.CSSProperties = { padding: '8px 12px', border: '1px solid #e2e8f0', borderRadius: 6, fontSize: 14, width: '100%', boxSizing: 'border-box' };
-const btnStyle = (bg: string): React.CSSProperties => ({ background: bg, color: '#fff', border: 'none', borderRadius: 6, padding: '8px 16px', cursor: 'pointer', fontSize: 14, fontWeight: 600 });
-const smallBtn = (bg: string): React.CSSProperties => ({ background: bg, color: '#fff', border: 'none', borderRadius: 4, padding: '4px 10px', cursor: 'pointer', fontSize: 12 });
+const cardStyle: React.CSSProperties = {
+  background: '#fff', borderRadius: 10, padding: 20,
+  boxShadow: '0 1px 4px rgba(0,0,0,0.08)', marginTop: 16,
+};
+const inputStyle: React.CSSProperties = {
+  padding: '8px 12px', border: '1px solid #e2e8f0',
+  borderRadius: 6, fontSize: 14, width: '100%',
+};
+const btnStyle = (bg: string): React.CSSProperties => ({
+  background: bg, color: '#fff', border: 'none', borderRadius: 6,
+  padding: '8px 16px', cursor: 'pointer', fontSize: 14, fontWeight: 600,
+  minHeight: 'auto', minWidth: 'auto',
+});
+const smallBtn = (bg: string): React.CSSProperties => ({
+  background: bg, color: '#fff', border: 'none', borderRadius: 4,
+  padding: '4px 10px', cursor: 'pointer', fontSize: 12,
+  minHeight: 'auto', minWidth: 'auto',
+});
 const fieldGroup: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: 4 };
-const labelStyle: React.CSSProperties = { fontSize: 11, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' };
+const labelStyle: React.CSSProperties = {
+  fontSize: 11, fontWeight: 600, color: '#64748b',
+  textTransform: 'uppercase', letterSpacing: '0.05em',
+};

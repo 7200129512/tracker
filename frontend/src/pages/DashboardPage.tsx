@@ -11,27 +11,26 @@ export default function DashboardPage() {
   const { data: alerts } = useDashboardAlerts(month);
   const { data: dailyExp } = useMonthlyDailyExpenses();
   const { data: dailyChart } = useDailyChart();
-  const { data: portfolio, isLoading: portfolioLoading } = usePortfolioLiveValue();
+  const { data: portfolio } = usePortfolioLiveValue();
   const { data: loans = [] } = useLoans();
   const activeLoans = loans.filter((l) => !l.isClosed);
 
   const today = new Date();
-  const todayLabel = today.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
   const monthName = today.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
 
   if (isLoading) return <p>Loading dashboard…</p>;
 
   const surplus = summary?.monthlySurplus ?? 0;
+  const invested = portfolio?.investedValue ?? summary?.portfolioInvestedValue ?? 0;
+  const current  = portfolio?.currentValue  ?? summary?.portfolioCurrentValue  ?? 0;
+  const gain     = portfolio?.gainLoss      ?? 0;
+  const gainPct  = portfolio?.gainLossPct   ?? 0;
 
   return (
-    <div style={{ maxWidth: 1400, margin: '0 auto', padding: window.innerWidth < 768 ? 0 : '0 20px' }}>
-      <h2 style={{ 
-        marginBottom: 20, 
-        color: '#1e293b',
-        fontSize: window.innerWidth < 768 ? 24 : 28
-      }}>Dashboard — {formatMonth(month)}</h2>
+    <div style={{ maxWidth: 1400, margin: '0 auto' }}>
+      <h2 className="page-heading">Dashboard — {formatMonth(month)}</h2>
 
-      {/* Alerts — budget and low surplus only */}
+      {/* Alerts */}
       {alerts && (
         <div style={{ marginBottom: 16 }}>
           {alerts.budgetAlert && (
@@ -47,194 +46,113 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Row 1 — Daily bank tracking + Income + Monthly Spend & Receive */}
-      <div style={{ 
-        display: 'grid', 
-        gridTemplateColumns: window.innerWidth < 768 ? '1fr' : window.innerWidth < 1200 ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', 
-        gap: window.innerWidth < 768 ? 12 : 16, 
-        marginBottom: 16 
-      }}>
-        <Card label="Daily Spend & Receive" value={`${formatINR(dailyExp?.todayTotal ?? 0)} / ${formatINR(dailyExp?.todayCredit ?? 0)}`} color="#f97316" />
-        <IncomeCard 
-          salary={formatINR(summary?.totalIncome ?? 0)}
-          pf={formatINR(summary?.pfAmount ?? 0)}
-          variablePay={formatINR(summary?.variablePayAmount ?? 0)}
+      {/* Row 1 — Daily Spend/Receive · Income · Monthly Spend/Receive */}
+      <div className="dash-grid">
+        <DashCard
+          label="Daily Spend & Receive"
+          value={`${formatINR(dailyExp?.todayTotal ?? 0)} / ${formatINR(dailyExp?.todayCredit ?? 0)}`}
+          color="#f97316"
         />
-        <Card label="Monthly Spend & Receive" value={`${formatINR(dailyExp?.monthTotal ?? 0)} / ${formatINR(dailyExp?.monthCredit ?? 0)}`} color="#dc2626" />
+        <DashCard
+          label="Salary / PF / Variable Pay"
+          value={`${formatINR(summary?.totalIncome ?? 0)} / ${formatINR(summary?.pfAmount ?? 0)} / ${formatINR(summary?.variablePayAmount ?? 0)}`}
+          color="#22c55e"
+        />
+        <DashCard
+          label="Monthly Spend & Receive"
+          value={`${formatINR(dailyExp?.monthTotal ?? 0)} / ${formatINR(dailyExp?.monthCredit ?? 0)}`}
+          color="#dc2626"
+        />
       </div>
 
-      {/* Row 2 — Monthly Surplus/Expenses, Investments, and Loan Breakdown */}
-      <div style={{ 
-        display: 'grid', 
-        gridTemplateColumns: window.innerWidth < 768 ? '1fr' : window.innerWidth < 1200 ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', 
-        gap: window.innerWidth < 768 ? 12 : 16, 
-        marginBottom: 16 
-      }}>
-        <IncomeCard 
-          salary={formatINR(surplus)}
-          pf={formatINR(summary?.totalExpenses ?? 0)}
-          variablePay=""
-          labels="Monthly Surplus / Fixed Expenses"
+      {/* Row 2 — Surplus/Expenses · Investments · Loan Breakdown */}
+      <div className="dash-grid">
+        <DashCard
+          label="Monthly Surplus / Fixed Expenses"
+          value={`${formatINR(surplus)} / ${formatINR(summary?.totalExpenses ?? 0)}`}
+          color="#22c55e"
         />
-        {(() => {
-          const invested  = portfolio?.investedValue  ?? summary?.portfolioInvestedValue ?? 0;
-          const current   = portfolio?.currentValue   ?? summary?.portfolioCurrentValue  ?? 0;
-          const gain      = portfolio?.gainLoss       ?? 0;
-          const gainPct   = portfolio?.gainLossPct    ?? 0;
-          return (
-            <InvestmentCard 
-              invested={formatINR(invested)}
-              current={formatINR(current)}
-              gainLoss={`${formatINR(gain)} (${gainPct.toFixed(2)}%)`}
-            />
-          );
-        })()}
-        <div style={{ 
-          background: '#fff', 
-          borderRadius: 10, 
-          padding: window.innerWidth < 768 ? '12px 16px' : window.innerWidth < 1024 ? '14px 18px' : '16px 20px', 
-          boxShadow: '0 1px 4px rgba(0,0,0,0.08)', 
-          borderLeft: '4px solid #f97316' 
-        }}>
-          <div style={{ fontSize: 12, color: '#64748b', marginBottom: 6 }}>Loan Breakdown</div>
-          {activeLoans.length > 0 ? (
-            <div>
-              {activeLoans.slice(0, 1).map((loan) => {
-                const remainingMonths = loan.emiAmount > 0 ? Math.ceil(loan.outstandingPrincipal / loan.emiAmount) : 0;
-                const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
-                const isTablet = typeof window !== 'undefined' && window.innerWidth >= 768 && window.innerWidth < 1024;
-                return (
-                  <div key={loan.id}>
-                    <div style={{ 
-                      fontSize: isMobile ? 13 : isTablet ? 14 : 14, 
-                      fontWeight: 700, 
-                      color: '#1e293b', 
-                      marginBottom: 2 
-                    }}>{loan.loanName}</div>
-                    <div style={{ 
-                      fontSize: isMobile ? 16 : isTablet ? 17 : 18, 
-                      fontWeight: 700, 
-                      color: '#1e293b' 
-                    }}>{formatINR(loan.outstandingPrincipal)}</div>
-                    <div style={{ 
-                      fontSize: isMobile ? 10 : isTablet ? 11 : 11, 
-                      color: '#94a3b8', 
-                      marginTop: 2 
-                    }}>EMI: <span style={{ fontWeight: 700 }}>{formatINR(loan.emiAmount)}</span> · ~{remainingMonths}m</div>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div style={{ fontSize: 12, color: '#94a3b8' }}>No active loans</div>
-          )}
-        </div>
+        <DashCard
+          label="Total Invested / Current Value / Gain/Loss"
+          value={`${formatINR(invested)} / ${formatINR(current)} / ${formatINR(gain)} (${gainPct.toFixed(2)}%)`}
+          color="#3b82f6"
+          small
+        />
+        <LoanCard loans={activeLoans} />
       </div>
 
-      {/* Daily chart — current month day by day */}
-      {dailyChart && dailyChart.length > 0 && (
-        <div style={{ ...cardStyle, marginTop: 8 }}>
-          <h3 style={{ 
-            marginBottom: 4, 
-            color: '#1e293b', 
-            fontSize: window.innerWidth < 768 ? 16 : 18 
-          }}>Daily Transactions — {monthName}</h3>
-          <p style={{ 
-            fontSize: window.innerWidth < 768 ? 12 : 13, 
-            color: '#64748b', 
-            marginBottom: window.innerWidth < 768 ? 12 : 16 
-          }}>Day-by-day spent and received from your bank emails</p>
-          <ResponsiveContainer 
-            width="100%" 
-            height={window.innerWidth < 768 ? 250 : 300}
-          >
-            <LineChart 
-              data={dailyChart} 
-              margin={{ 
-                top: 8, 
-                right: window.innerWidth < 768 ? 40 : 70, 
-                left: window.innerWidth < 768 ? 5 : 10, 
-                bottom: window.innerWidth < 768 ? 20 : 24 
-              }}
+      {/* Daily chart */}
+      {dailyChart && dailyChart.length > 0 ? (
+        <div className="chart-card">
+          <h3>Daily Transactions — {monthName}</h3>
+          <p>Day-by-day spent and received from your bank emails</p>
+          <ResponsiveContainer width="100%" height={280}>
+            <LineChart
+              data={dailyChart}
+              margin={{ top: 8, right: 48, left: 8, bottom: 20 }}
             >
               <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
               <XAxis
                 dataKey="day"
-                tick={{ fontSize: window.innerWidth < 768 ? 9 : 11 }}
-                label={window.innerWidth < 768 ? undefined : { 
-                  value: 'Day of Month', 
-                  position: 'insideBottom', 
-                  offset: -12, 
-                  fontSize: 11, 
-                  fill: '#94a3b8' 
-                }}
+                tick={{ fontSize: 10 }}
+                label={{ value: 'Day of Month', position: 'insideBottom', offset: -12, fontSize: 11, fill: '#94a3b8' }}
               />
-              {/* Left axis — Spent (small ₹ amounts, no k) */}
               <YAxis
                 yAxisId="left"
                 orientation="left"
-                tickFormatter={(v) => window.innerWidth < 768 ? `₹${v > 1000 ? (v/1000).toFixed(0) + 'k' : v}` : `₹${v}`}
-                tick={{ fontSize: window.innerWidth < 768 ? 8 : 10, fill: '#ef4444' }}
-                width={window.innerWidth < 768 ? 35 : 55}
+                tickFormatter={(v) => v === 0 ? '₹0' : `₹${v > 999 ? (v / 1000).toFixed(0) + 'k' : v}`}
+                tick={{ fontSize: 10, fill: '#ef4444' }}
+                width={42}
                 allowDecimals={false}
               />
-              {/* Right axis — Received (large amounts in k) */}
               <YAxis
                 yAxisId="right"
                 orientation="right"
                 tickFormatter={(v) => v === 0 ? '₹0' : `₹${(v / 1000).toFixed(0)}k`}
-                tick={{ fontSize: window.innerWidth < 768 ? 8 : 10, fill: '#22c55e' }}
-                width={window.innerWidth < 768 ? 30 : 48}
+                tick={{ fontSize: 10, fill: '#22c55e' }}
+                width={38}
                 allowDecimals={false}
               />
               <Tooltip
                 formatter={(v: number, name: string) => [formatINR(v), name === 'spent' ? '🔴 Spent' : '🟢 Received']}
                 labelFormatter={(l) => `Day ${l}`}
-                contentStyle={{ fontSize: window.innerWidth < 768 ? 11 : 13 }}
+                contentStyle={{ fontSize: 12 }}
               />
-              <Legend 
-                verticalAlign="top" 
-                height={window.innerWidth < 768 ? 24 : 32} 
-                formatter={(v) => window.innerWidth < 768 
-                  ? (v === 'spent' ? '🔴 Spent' : '🟢 Received')
-                  : (v === 'spent' ? '🔴 Spent (left)' : '🟢 Received (right)')
-                }
-                wrapperStyle={{ fontSize: window.innerWidth < 768 ? 11 : 13 }}
+              <Legend
+                verticalAlign="top"
+                height={28}
+                formatter={(v) => v === 'spent' ? '🔴 Spent (left)' : '🟢 Received (right)'}
+                wrapperStyle={{ fontSize: 12 }}
               />
               <Line
                 yAxisId="left"
                 type="monotone"
                 dataKey="spent"
                 stroke="#ef4444"
-                strokeWidth={window.innerWidth < 768 ? 1.5 : 2}
-                dot={(props: any) => props.payload.spent > 0 ? 
-                  <circle cx={props.cx} cy={props.cy} r={window.innerWidth < 768 ? 2 : 4} fill="#ef4444" /> : <g />}
-                activeDot={{ r: window.innerWidth < 768 ? 4 : 6 }}
+                strokeWidth={2}
+                dot={(props: any) => props.payload.spent > 0
+                  ? <circle cx={props.cx} cy={props.cy} r={3} fill="#ef4444" />
+                  : <g />}
+                activeDot={{ r: 5 }}
               />
               <Line
                 yAxisId="right"
                 type="monotone"
                 dataKey="received"
                 stroke="#22c55e"
-                strokeWidth={window.innerWidth < 768 ? 1.5 : 2}
-                dot={(props: any) => props.payload.received > 0 ? 
-                  <circle cx={props.cx} cy={props.cy} r={window.innerWidth < 768 ? 2 : 4} fill="#22c55e" /> : <g />}
-                activeDot={{ r: window.innerWidth < 768 ? 4 : 6 }}
+                strokeWidth={2}
+                dot={(props: any) => props.payload.received > 0
+                  ? <circle cx={props.cx} cy={props.cy} r={3} fill="#22c55e" />
+                  : <g />}
+                activeDot={{ r: 5 }}
               />
             </LineChart>
           </ResponsiveContainer>
         </div>
-      )}
-
-      {(!dailyChart || dailyChart.length === 0) && (
-        <div style={{ 
-          ...cardStyle, 
-          marginTop: 8, 
-          textAlign: 'center', 
-          padding: window.innerWidth < 768 ? '24px 16px' : '32px 20px' 
-        }}>
-          <div style={{ fontSize: window.innerWidth < 768 ? 24 : 32, marginBottom: 8 }}>📊</div>
-          <p style={{ color: '#64748b', fontSize: window.innerWidth < 768 ? 12 : 14 }}>
+      ) : (
+        <div className="chart-card" style={{ textAlign: 'center', padding: '32px 20px' }}>
+          <div style={{ fontSize: 32, marginBottom: 8 }}>📊</div>
+          <p style={{ color: '#64748b', fontSize: 14 }}>
             No transactions this month yet. Sync your Gmail to see the daily chart.
           </p>
         </div>
@@ -243,86 +161,74 @@ export default function DashboardPage() {
   );
 }
 
-function Card({ label, value, color, highlight }: { label: string; value: string; color: string; highlight?: boolean }) {
-  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
-  const isTablet = typeof window !== 'undefined' && window.innerWidth >= 768 && window.innerWidth < 1024;
-  
+/* ─── Reusable card ──────────────────────────────────────── */
+function DashCard({
+  label, value, color, small,
+}: {
+  label: string;
+  value: string;
+  color: string;
+  small?: boolean;
+}) {
   return (
-    <div style={{
-      background: '#fff', 
-      borderRadius: 10, 
-      padding: isMobile ? '12px 16px' : isTablet ? '14px 18px' : '16px 20px',
-      boxShadow: '0 1px 4px rgba(0,0,0,0.08)', 
-      borderLeft: `4px solid ${color}`,
-    }}>
-      <div style={{ fontSize: 12, color: '#64748b', marginBottom: 6 }}>{label}</div>
-      <div style={{ 
-        fontSize: isMobile ? 16 : isTablet ? 17 : 18, 
-        fontWeight: 700, 
-        color: highlight ? '#ef4444' : '#1e293b' 
-      }}>{value}</div>
+    <div
+      className="dash-card"
+      style={{ borderLeft: `4px solid ${color}` }}
+    >
+      <div className="dash-card-label">{label}</div>
+      <div
+        className="dash-card-value"
+        style={small ? { fontSize: 14, lineHeight: 1.4 } : undefined}
+      >
+        {value}
+      </div>
     </div>
   );
 }
 
-function IncomeCard({ salary, pf, variablePay, labels }: { salary: string; pf: string; variablePay: string; labels?: string }) {
-  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
-  const isTablet = typeof window !== 'undefined' && window.innerWidth >= 768 && window.innerWidth < 1024;
-  const defaultLabels = labels || "Salary / PF / Variable Pay";
-  const displayValues = variablePay ? `${salary} / ${pf} / ${variablePay}` : `${salary} / ${pf}`;
-  
+/* ─── Loan breakdown card ────────────────────────────────── */
+function LoanCard({ loans }: { loans: any[] }) {
   return (
-    <div style={{
-      background: '#fff', 
-      borderRadius: 10, 
-      padding: isMobile ? '12px 16px' : isTablet ? '14px 18px' : '16px 20px',
-      boxShadow: '0 1px 4px rgba(0,0,0,0.08)', 
-      borderLeft: '4px solid #22c55e',
-    }}>
-      <div style={{ fontSize: 12, color: '#64748b', marginBottom: 6 }}>{defaultLabels}</div>
-      <div style={{ 
-        fontSize: isMobile ? 14 : isTablet ? 16 : 18, 
-        fontWeight: 700, 
-        color: '#1e293b' 
-      }}>{displayValues}</div>
+    <div className="dash-card" style={{ borderLeft: '4px solid #f97316' }}>
+      <div className="dash-card-label">Loan Breakdown</div>
+      {loans.length > 0 ? (
+        loans.slice(0, 1).map((loan) => {
+          const remainingMonths = loan.emiAmount > 0
+            ? Math.ceil(loan.outstandingPrincipal / loan.emiAmount)
+            : 0;
+          return (
+            <div key={loan.id}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#1e293b', marginBottom: 2 }}>
+                {loan.loanName}
+              </div>
+              <div className="dash-card-value">{formatINR(loan.outstandingPrincipal)}</div>
+              <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>
+                EMI: <span style={{ fontWeight: 700 }}>{formatINR(loan.emiAmount)}</span> · ~{remainingMonths}m
+              </div>
+            </div>
+          );
+        })
+      ) : (
+        <div style={{ fontSize: 12, color: '#94a3b8' }}>No active loans</div>
+      )}
     </div>
   );
 }
 
-function InvestmentCard({ invested, current, gainLoss }: { invested: string; current: string; gainLoss: string }) {
-  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
-  const isTablet = typeof window !== 'undefined' && window.innerWidth >= 768 && window.innerWidth < 1024;
-  
-  return (
-    <div style={{
-      background: '#fff', 
-      borderRadius: 10, 
-      padding: isMobile ? '12px 16px' : isTablet ? '14px 18px' : '16px 20px',
-      boxShadow: '0 1px 4px rgba(0,0,0,0.08)', 
-      borderLeft: '4px solid #3b82f6',
-    }}>
-      <div style={{ fontSize: 12, color: '#64748b', marginBottom: 6 }}>Total Invested / Current Value / Total Gain/Loss</div>
-      <div style={{ 
-        fontSize: isMobile ? 12 : isTablet ? 14 : 16, 
-        fontWeight: 700, 
-        color: '#1e293b', 
-        whiteSpace: 'nowrap', 
-        overflow: 'hidden', 
-        textOverflow: 'ellipsis' 
-      }}>{invested} / {current} / {gainLoss}</div>
-    </div>
-  );
-}
-
-const cardStyle: React.CSSProperties = {
-  background: '#fff', borderRadius: 10, padding: 20, boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
-};
-
+/* ─── Alert styles ───────────────────────────────────────── */
 function alertStyle(type: 'orange' | 'red'): React.CSSProperties {
   const colors = {
     orange: { bg: '#fff7ed', border: '#f97316', text: '#9a3412' },
-    red: { bg: '#fef2f2', border: '#ef4444', text: '#991b1b' },
+    red:    { bg: '#fef2f2', border: '#ef4444', text: '#991b1b' },
   };
   const c = colors[type];
-  return { background: c.bg, border: `1px solid ${c.border}`, color: c.text, borderRadius: 8, padding: '10px 16px', marginBottom: 8, fontSize: 14 };
+  return {
+    background: c.bg,
+    border: `1px solid ${c.border}`,
+    color: c.text,
+    borderRadius: 8,
+    padding: '10px 16px',
+    marginBottom: 8,
+    fontSize: 14,
+  };
 }
