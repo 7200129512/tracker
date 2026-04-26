@@ -2,6 +2,7 @@ import {
   LineChart, Line, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, CartesianGrid,
 } from 'recharts';
 import { useDashboardSummary, useDashboardAlerts, useMonthlyDailyExpenses, useDailyChart, usePortfolioLiveValue } from '../api/dashboard';
+import { useLoans } from '../api/loans';
 import { formatINR, currentMonth, formatMonth } from '../utils/format';
 
 export default function DashboardPage() {
@@ -11,6 +12,8 @@ export default function DashboardPage() {
   const { data: dailyExp } = useMonthlyDailyExpenses();
   const { data: dailyChart } = useDailyChart();
   const { data: portfolio, isLoading: portfolioLoading } = usePortfolioLiveValue();
+  const { data: loans = [] } = useLoans();
+  const activeLoans = loans.filter((l) => !l.isClosed);
 
   const today = new Date();
   const todayLabel = today.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
@@ -59,10 +62,40 @@ export default function DashboardPage() {
       {/* Row 3 — Obligations */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 16 }}>
         <Card label="Fixed Expenses (Rent etc.)" value={formatINR(summary?.totalExpenses ?? 0)} color="#ef4444" />
-        <Card label="Monthly EMI" value={formatINR(summary?.monthlyEmi ?? 0)} color="#f97316" />
+        <Card label="Total Monthly EMI" value={formatINR(summary?.monthlyEmi ?? 0)} color="#f97316" />
         <Card label="Bank Debits (This Month)" value={formatINR(summary?.cashExpenses ?? 0)} color="#94a3b8" />
-        <Card label="Loan Outstanding" value={formatINR(summary?.outstandingLoanPrincipal ?? 0)} color="#be123c" />
+        <Card label="Total Loan Outstanding" value={formatINR(summary?.outstandingLoanPrincipal ?? 0)} color="#be123c" />
       </div>
+
+      {/* Loan breakdown — one card per active loan */}
+      {activeLoans.length > 0 && (
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: '#64748b', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            Loan Breakdown
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 12 }}>
+            {activeLoans.map((loan) => {
+              const remainingMonths = loan.emiAmount > 0 ? Math.ceil(loan.outstandingPrincipal / loan.emiAmount) : 0;
+              return (
+                <div key={loan.id} style={{ background: '#fff', borderRadius: 10, padding: '14px 16px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', borderLeft: '4px solid #f97316' }}>
+                  <div style={{ fontSize: 12, color: '#64748b', marginBottom: 2 }}>{loan.loanName}</div>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: '#1e293b' }}>{formatINR(loan.outstandingPrincipal)}</div>
+                  <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 4 }}>
+                    EMI: {formatINR(loan.emiAmount)} · ~{remainingMonths} months left
+                  </div>
+                  <div style={{ background: '#e2e8f0', borderRadius: 3, height: 4, marginTop: 8 }}>
+                    <div style={{
+                      background: '#f97316',
+                      width: `${Math.min(loan.originalPrincipal > 0 ? ((loan.originalPrincipal - loan.outstandingPrincipal) / loan.originalPrincipal) * 100 : 0, 100)}%`,
+                      height: 4, borderRadius: 3,
+                    }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Row 4 — Portfolio summary (live prices) */}
       {(() => {

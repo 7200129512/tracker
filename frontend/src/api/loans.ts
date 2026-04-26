@@ -74,6 +74,7 @@ export const useAddLoan = () => {
       // Convert camelCase to snake_case for database
       const payload = {
         loan_name: data.loanName,
+        loan_type: (data as any).loanType || 'Other',
         original_principal: data.originalPrincipal,
         outstanding_principal: data.outstandingPrincipal,
         emi_amount: data.emiAmount,
@@ -99,6 +100,7 @@ export const useUpdateLoan = () => {
       // Convert camelCase to snake_case for database
       const payload: any = {};
       if (data.loanName) payload.loan_name = data.loanName;
+      if ((data as any).loanType) payload.loan_type = (data as any).loanType;
       if (data.originalPrincipal !== undefined) payload.original_principal = data.originalPrincipal;
       if (data.outstandingPrincipal !== undefined) payload.outstanding_principal = data.outstandingPrincipal;
       if (data.emiAmount !== undefined) payload.emi_amount = data.emiAmount;
