@@ -211,10 +211,8 @@ function IncomeCard({ salary, pf, variablePay }: { salary: string; pf: string; v
       background: '#fff', borderRadius: 10, padding: '16px 20px',
       boxShadow: '0 1px 4px rgba(0,0,0,0.08)', borderLeft: '4px solid #22c55e',
     }}>
-      <div style={{ fontSize: 12, color: '#64748b', marginBottom: 8 }}>Salary / PF / Variable Pay</div>
-      <div style={{ fontSize: 18, fontWeight: 700, color: '#1e293b', marginBottom: 4 }}>{salary}</div>
-      <div style={{ fontSize: 18, fontWeight: 700, color: '#1e293b', marginBottom: 4 }}>{pf}</div>
-      <div style={{ fontSize: 18, fontWeight: 700, color: '#1e293b' }}>{variablePay}</div>
+      <div style={{ fontSize: 12, color: '#64748b', marginBottom: 6 }}>Salary / PF / Variable Pay</div>
+      <div style={{ fontSize: 20, fontWeight: 700, color: '#1e293b' }}>{salary} / {pf} / {variablePay}</div>
     </div>
   );
 }
