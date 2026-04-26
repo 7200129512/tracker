@@ -67,34 +67,30 @@ export default function DashboardPage() {
         <div style={{ ...cardStyle, marginTop: 8 }}>
           <h3 style={{ marginBottom: 4, color: '#1e293b' }}>Daily Transactions — {monthName}</h3>
           <p style={{ fontSize: 13, color: '#64748b', marginBottom: 16 }}>Day-by-day spent and received from your bank emails</p>
-          <ResponsiveContainer width="100%" height={280}>
-            <LineChart data={dailyChart} margin={{ top: 8, right: 60, left: 0, bottom: 20 }}>
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart data={dailyChart} margin={{ top: 8, right: 70, left: 10, bottom: 24 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
               <XAxis
                 dataKey="day"
                 tick={{ fontSize: 11 }}
                 label={{ value: 'Day of Month', position: 'insideBottom', offset: -12, fontSize: 11, fill: '#94a3b8' }}
               />
-              {/* Left Y-axis for spent (smaller amounts in ₹) */}
+              {/* Left axis — Spent (small ₹ amounts, no k) */}
               <YAxis
-                yAxisId="spent"
+                yAxisId="left"
                 orientation="left"
-                tickFormatter={(v) => v === 0 ? '₹0' : `₹${v.toLocaleString('en-IN')}`}
+                tickFormatter={(v) => `₹${v}`}
                 tick={{ fontSize: 10, fill: '#ef4444' }}
-                width={58}
-                domain={[0, 'auto']}
-                tickCount={6}
+                width={55}
                 allowDecimals={false}
               />
-              {/* Right Y-axis for received (larger amounts) */}
+              {/* Right axis — Received (large amounts in k) */}
               <YAxis
-                yAxisId="received"
+                yAxisId="right"
                 orientation="right"
                 tickFormatter={(v) => v === 0 ? '₹0' : `₹${(v / 1000).toFixed(0)}k`}
-                tick={{ fontSize: 11, fill: '#22c55e' }}
-                width={52}
-                domain={[0, 'auto']}
-                tickCount={6}
+                tick={{ fontSize: 10, fill: '#22c55e' }}
+                width={48}
                 allowDecimals={false}
               />
               <Tooltip
@@ -102,23 +98,23 @@ export default function DashboardPage() {
                 labelFormatter={(l) => `Day ${l}`}
                 contentStyle={{ fontSize: 13 }}
               />
-              <Legend verticalAlign="top" height={32} formatter={(v) => v === 'spent' ? '🔴 Spent' : '🟢 Received'} />
+              <Legend verticalAlign="top" height={32} formatter={(v) => v === 'spent' ? '🔴 Spent (left)' : '🟢 Received (right)'} />
               <Line
-                yAxisId="received"
-                type="monotone"
-                dataKey="received"
-                stroke="#22c55e"
-                strokeWidth={2}
-                dot={(props: any) => props.payload.received > 0 ? <circle cx={props.cx} cy={props.cy} r={4} fill="#22c55e" /> : <g />}
-                activeDot={{ r: 6 }}
-              />
-              <Line
-                yAxisId="spent"
+                yAxisId="left"
                 type="monotone"
                 dataKey="spent"
                 stroke="#ef4444"
                 strokeWidth={2}
                 dot={(props: any) => props.payload.spent > 0 ? <circle cx={props.cx} cy={props.cy} r={4} fill="#ef4444" /> : <g />}
+                activeDot={{ r: 6 }}
+              />
+              <Line
+                yAxisId="right"
+                type="monotone"
+                dataKey="received"
+                stroke="#22c55e"
+                strokeWidth={2}
+                dot={(props: any) => props.payload.received > 0 ? <circle cx={props.cx} cy={props.cy} r={4} fill="#22c55e" /> : <g />}
                 activeDot={{ r: 6 }}
               />
             </LineChart>
