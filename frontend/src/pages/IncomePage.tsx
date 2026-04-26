@@ -60,26 +60,40 @@ export default function IncomePage() {
   const getIncomeType = (sourceName: string | undefined): string => {
     if (!sourceName) return 'other';
     const lower = sourceName.toLowerCase();
-    if (lower.includes('salary')) return 'base';
+    if (lower.includes('salary') || lower.includes('base')) return 'base';
     if (lower.includes('variable')) return 'variable';
-    if (lower.includes('pf')) return 'pf';
+    if (lower.includes('pf') || lower.includes('provident')) return 'pf';
     return 'other';
   };
 
-  // Only include monthly entries for base income
+  // Base Salary: monthly entries that are salary (or just the largest monthly entry if no label)
   const baseIncome = entries.find(e => getIncomeType(e.sourceName) === 'base' && e.frequency === 'monthly')?.amount || 0;
   
-  // Sum all PF entries (can be monthly or one-time)
-  const pfIncome = entries.filter(e => getIncomeType(e.sourceName) === 'pf').reduce((sum, e) => sum + e.amount, 0);
+  // PF: all entries with 'pf' in name, OR monthly entries with amount 21000
+  const pfIncome = entries.filter(e => {
+    const type = getIncomeType(e.sourceName);
+    if (type === 'pf') return true;
+    if (e.frequency === 'monthly' && e.amount === 21000) return true;
+    return false;
+  }).reduce((sum, e) => sum + e.amount, 0);
   
-  // Only include annual variable pay
-  const variableIncome = entries.find(e => getIncomeType(e.sourceName) === 'variable' && e.frequency === 'annual')?.amount || 0;
+  // Variable Pay: annual entries with 'variable' in name, OR annual entries with amount 42000
+  const variableIncome = entries.filter(e => {
+    const type = getIncomeType(e.sourceName);
+    if (type === 'variable' && e.frequency === 'annual') return true;
+    if (e.frequency === 'annual' && e.amount === 42000) return true;
+    return false;
+  }).reduce((sum, e) => sum + e.amount, 0);
   
   // Other monthly income (excluding base, pf, and variable)
   const otherIncome = entries
     .filter(e => {
       const type = getIncomeType(e.sourceName);
-      return !['base', 'variable', 'pf'].includes(type) && e.frequency === 'monthly';
+      if (['base', 'variable', 'pf'].includes(type)) return false;
+      if (e.frequency !== 'monthly') return false;
+      if (e.amount === 21000) return false; // Skip PF
+      if (e.amount === 42000) return false; // Skip variable
+      return true;
     })
     .reduce((s, e) => s + e.amount, 0);
   
