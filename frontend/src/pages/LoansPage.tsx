@@ -105,7 +105,12 @@ export default function LoansPage() {
       <h2 style={{ marginBottom: 20, color: '#1e293b' }}>Loans</h2>
 
       {/* ── Summary cards ─────────────────────────────────────────────────── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 20 }}>
+      <div style={{ 
+        display: 'grid', 
+        gridTemplateColumns: window.innerWidth < 768 ? '1fr' : 'repeat(3, 1fr)', 
+        gap: window.innerWidth < 768 ? 12 : 16, 
+        marginBottom: 20 
+      }}>
         <SummaryCard label="Total Outstanding" value={formatINR(totalOutstanding)} color="#ef4444" />
         <SummaryCard label="Total Monthly EMI" value={formatINR(totalEmi)} color="#f97316" />
         <SummaryCard label="Active Loans" value={`${activeLoans.length}`} color="#3b82f6" />
@@ -154,7 +159,11 @@ export default function LoansPage() {
             </div>
 
             {/* Fields */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}>
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: window.innerWidth < 768 ? '1fr' : 'repeat(auto-fill, minmax(200px, 1fr))', 
+              gap: 12 
+            }}>
               <div style={fieldGroup}>
                 <label style={labelStyle}>Loan Name / Bank</label>
                 <input
@@ -244,7 +253,11 @@ export default function LoansPage() {
       ) : (
         <>
           <h3 style={{ marginTop: 24, marginBottom: 12, color: '#1e293b' }}>Active Loans</h3>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 16 }}>
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: window.innerWidth < 768 ? '1fr' : 'repeat(auto-fill, minmax(320px, 1fr))', 
+            gap: 16 
+          }}>
             {activeLoans.map((loan) => (
               <LoanCard
                 key={loan.id}
@@ -262,7 +275,11 @@ export default function LoansPage() {
       {closedLoans.length > 0 && (
         <>
           <h3 style={{ marginTop: 28, marginBottom: 12, color: '#64748b' }}>Closed Loans</h3>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 16 }}>
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: window.innerWidth < 768 ? '1fr' : 'repeat(auto-fill, minmax(320px, 1fr))', 
+            gap: 16 
+          }}>
             {closedLoans.map((loan) => (
               <LoanCard
                 key={loan.id}
@@ -290,6 +307,7 @@ function LoanCard({
   onClose: () => void;
   closed?: boolean;
 }) {
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
   const loanType = ((loan as any).loanType || 'Other') as LoanType;
   const color = LOAN_TYPE_COLORS[loanType] || '#64748b';
   const icon  = LOAN_TYPE_ICONS[loanType]  || '📋';
@@ -307,27 +325,45 @@ function LoanCard({
 
   return (
     <div style={{
-      background: '#fff', borderRadius: 12, padding: 20,
+      background: '#fff', 
+      borderRadius: 12, 
+      padding: isMobile ? '16px' : '20px',
       boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
       borderTop: `4px solid ${closed ? '#94a3b8' : color}`,
       opacity: closed ? 0.7 : 1,
     }}>
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'flex-start', 
+        marginBottom: 12,
+        flexDirection: isMobile ? 'column' : 'row',
+        gap: isMobile ? 8 : 0
+      }}>
+        <div style={{ flex: 1 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
             <span style={{
               background: closed ? '#f1f5f9' : `${color}20`,
               color: closed ? '#94a3b8' : color,
-              borderRadius: 6, padding: '2px 8px', fontSize: 12, fontWeight: 600,
+              borderRadius: 6, 
+              padding: '2px 8px', 
+              fontSize: isMobile ? 11 : 12, 
+              fontWeight: 600,
             }}>
               {icon} {loanType}
             </span>
-            {closed && <span style={{ background: '#22c55e', color: '#fff', borderRadius: 4, padding: '2px 8px', fontSize: 11 }}>CLOSED</span>}
+            {closed && <span style={{ 
+              background: '#22c55e', 
+              color: '#fff', 
+              borderRadius: 4, 
+              padding: '2px 8px', 
+              fontSize: isMobile ? 10 : 11 
+            }}>CLOSED</span>}
           </div>
-          <h3 style={{ margin: 0, fontSize: 16, color: '#1e293b' }}>{loan.loanName}</h3>
+          <h3 style={{ margin: 0, fontSize: isMobile ? 14 : 16, color: '#1e293b' }}>{loan.loanName}</h3>
         </div>
-        <div style={{ display: 'flex', gap: 6 }}>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
           {!closed && <button onClick={onEdit} style={smallBtn('#3b82f6')}>Edit</button>}
           {!closed && <button onClick={onClose} style={smallBtn('#22c55e')}>Close</button>}
           <button onClick={onDelete} style={smallBtn('#ef4444')}>Delete</button>
@@ -335,7 +371,12 @@ function LoanCard({
       </div>
 
       {/* Key figures */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
+      <div style={{ 
+        display: 'grid', 
+        gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', 
+        gap: 10, 
+        marginBottom: 14 
+      }}>
         <Stat label="Outstanding" value={formatINR(loan.outstandingPrincipal)} color={color} />
         <Stat label="Monthly EMI" value={formatINR(loan.emiAmount)} color="#f97316" />
         <Stat label="Interest Rate" value={`${loan.interestRatePa}% p.a.`} color="#8b5cf6" />
@@ -349,7 +390,15 @@ function LoanCard({
       {/* Progress bar */}
       {!closed && (
         <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#94a3b8', marginBottom: 4 }}>
+          <div style={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            fontSize: isMobile ? 10 : 11, 
+            color: '#94a3b8', 
+            marginBottom: 4,
+            flexDirection: isMobile ? 'column' : 'row',
+            gap: isMobile ? 2 : 0
+          }}>
             <span>Repaid {repaidPct.toFixed(1)}%</span>
             <span>{totalDuration || `~${remainingMonths} months left`}</span>
           </div>
@@ -363,19 +412,27 @@ function LoanCard({
 }
 
 function Stat({ label, value, color }: { label: string; value: string; color: string }) {
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
   return (
-    <div style={{ background: '#f8fafc', borderRadius: 8, padding: '8px 12px' }}>
-      <div style={{ fontSize: 11, color: '#94a3b8', marginBottom: 2 }}>{label}</div>
-      <div style={{ fontSize: 14, fontWeight: 700, color }}>{value}</div>
+    <div style={{ background: '#f8fafc', borderRadius: 8, padding: isMobile ? '6px 10px' : '8px 12px' }}>
+      <div style={{ fontSize: isMobile ? 10 : 11, color: '#94a3b8', marginBottom: 2 }}>{label}</div>
+      <div style={{ fontSize: isMobile ? 12 : 14, fontWeight: 700, color }}>{value}</div>
     </div>
   );
 }
 
 function SummaryCard({ label, value, color }: { label: string; value: string; color: string }) {
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
   return (
-    <div style={{ background: '#fff', borderRadius: 10, padding: '16px 20px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', borderLeft: `4px solid ${color}` }}>
+    <div style={{ 
+      background: '#fff', 
+      borderRadius: 10, 
+      padding: isMobile ? '12px 16px' : '16px 20px', 
+      boxShadow: '0 1px 4px rgba(0,0,0,0.08)', 
+      borderLeft: `4px solid ${color}` 
+    }}>
       <div style={{ fontSize: 12, color: '#64748b', marginBottom: 4 }}>{label}</div>
-      <div style={{ fontSize: 22, fontWeight: 700, color: '#1e293b' }}>{value}</div>
+      <div style={{ fontSize: isMobile ? 18 : 22, fontWeight: 700, color: '#1e293b' }}>{value}</div>
     </div>
   );
 }
