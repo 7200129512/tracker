@@ -309,7 +309,7 @@ export const usePortfolioLiveValue = () => {
           try {
             const r = await fetch(`/.netlify/functions/stock-price?symbol=${encodeURIComponent(h.stock_symbol)}`);
             if (r.ok) { const d = await r.json(); return { symbol: h.stock_symbol, price: d.price as number }; }
-          } catch { /* ignore */ }
+          } catch (_e) { /* ignore */ }
           return { symbol: h.stock_symbol, price: null as number | null };
         })
       );
