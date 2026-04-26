@@ -45,12 +45,27 @@ async function updateAccessToken(userId, accessToken, expiresAt) {
 
 // ── Gmail API helpers ─────────────────────────────────────────────────────────
 
-// Fetch message list with snippet (metadata only — very fast, no body fetch needed)
-async function fetchGmailMessageList(accessToken, query, maxResults = 100) {
-  const url = `https://gmail.googleapis.com/gmail/v1/users/me/messages?q=${encodeURIComponent(query)}&maxResults=${maxResults}`;
-  const res = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
-  const data = await res.json();
-  return data.messages || [];
+// Fetch ALL message IDs with pagination (handles more than 500 emails)
+async function fetchGmailMessageList(accessToken, query, maxResults = 500) {
+  let allMessages = [];
+  let pageToken = null;
+
+  do {
+    const url = new URL('https://gmail.googleapis.com/gmail/v1/users/me/messages');
+    url.searchParams.set('q', query);
+    url.searchParams.set('maxResults', Math.min(maxResults - allMessages.length, 500).toString());
+    if (pageToken) url.searchParams.set('pageToken', pageToken);
+
+    const res = await fetch(url.toString(), { headers: { Authorization: `Bearer ${accessToken}` } });
+    const data = await res.json();
+
+    if (data.messages) allMessages.push(...data.messages);
+    pageToken = data.nextPageToken || null;
+
+    if (allMessages.length >= maxResults) break;
+  } while (pageToken);
+
+  return allMessages;
 }
 
 // Fetch message with metadata + snippet only (fast — no full body)
@@ -272,7 +287,8 @@ exports.handler = async (event) => {
     const bankQuery = `(from:alerts@hdfcbank.net OR from:alerts@hdfcbank.bank.in OR from:noreply@hdfcbank.com OR from:hdfcbank.com OR from:alerts@sbi.co.in OR from:icicibank.com OR from:axisbank.com OR from:kotakbank.com OR from:yesbank.in) after:${since}`;
 
     // 4. Get message IDs (fast — just IDs, no body)
-    const messages = await fetchGmailMessageList(accessToken, bankQuery, 100);
+    // Fetch up to 500 messages to cover full month
+    const messages = await fetchGmailMessageList(accessToken, bankQuery, 500);
     if (messages.length === 0) {
       await updateLastSync(userId);
       return { statusCode: 200, headers, body: JSON.stringify({ success: true, saved: 0, skipped: 0, total: 0, message: 'No bank emails found this month.' }) };
@@ -287,8 +303,8 @@ exports.handler = async (event) => {
       return { statusCode: 200, headers, body: JSON.stringify({ success: true, saved: 0, skipped: messages.length, total: messages.length, message: 'All transactions already synced.' }) };
     }
 
-    // 6. Fetch full body for new messages in parallel batches of 10
-    const fullMessages = await batchProcess(newMessages, 10, (msg) =>
+    // 6. Fetch full body for new messages in parallel batches of 15
+    const fullMessages = await batchProcess(newMessages, 15, (msg) =>
       fetchMessageFull(accessToken, msg.id)
     );
 
