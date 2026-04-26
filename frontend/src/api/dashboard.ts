@@ -129,6 +129,47 @@ export const useCashFlow = () => {
   });
 };
 
+// Hook for monthly daily-transaction totals (from daily_transactions table)
+export const useMonthlyDailyExpenses = () => {
+  const { user } = useAuth();
+  const today = new Date();
+  const firstOfMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-01`;
+  const todayStr = today.toISOString().split('T')[0];
+
+  return useQuery<{ monthTotal: number; todayTotal: number }>({
+    queryKey: ['daily-expenses', 'summary', user?.id, todayStr],
+    queryFn: async () => {
+      if (!user?.id) throw new Error('User not authenticated');
+      const { supabase } = await import('./auth');
+
+      // Monthly total (debit only)
+      const { data: monthData } = await supabase
+        .from('daily_transactions')
+        .select('amount, type')
+        .eq('user_id', user.id)
+        .eq('type', 'debit')
+        .gte('date', firstOfMonth)
+        .lte('date', todayStr);
+
+      const monthTotal = (monthData || []).reduce((sum, r) => sum + Number(r.amount), 0);
+
+      // Today total (debit only)
+      const { data: todayData } = await supabase
+        .from('daily_transactions')
+        .select('amount, type')
+        .eq('user_id', user.id)
+        .eq('type', 'debit')
+        .eq('date', todayStr);
+
+      const todayTotal = (todayData || []).reduce((sum, r) => sum + Number(r.amount), 0);
+
+      return { monthTotal, todayTotal };
+    },
+    enabled: !!user?.id,
+    refetchInterval: 60000,
+  });
+};
+
 export const useDashboardAlerts = (month: string) => {
   const { user } = useAuth();
 

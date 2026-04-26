@@ -1,7 +1,7 @@
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer,
 } from 'recharts';
-import { useDashboardSummary, useCashFlow, useDashboardAlerts } from '../api/dashboard';
+import { useDashboardSummary, useCashFlow, useDashboardAlerts, useMonthlyDailyExpenses } from '../api/dashboard';
 import { formatINR, formatPct, currentMonth, formatMonth } from '../utils/format';
 
 export default function DashboardPage() {
@@ -9,6 +9,10 @@ export default function DashboardPage() {
   const { data: summary, isLoading } = useDashboardSummary(month);
   const { data: cashflow } = useCashFlow();
   const { data: alerts } = useDashboardAlerts(month);
+  const { data: dailyExp } = useMonthlyDailyExpenses();
+
+  const today = new Date();
+  const todayLabel = today.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
 
   if (isLoading) return <p>Loading dashboard…</p>;
 
@@ -57,6 +61,20 @@ export default function DashboardPage() {
         <Card label="Savings Balance" value={formatINR(summary?.savingsBalance ?? 0)} color="#0ea5e9" />
         <Card label="Savings Rate" value={formatPct(summary?.savingsRate ?? 0)} color="#14b8a6" />
         <Card label="Net Worth" value={formatINR(summary?.netWorth ?? 0)} color="#1e293b" />
+      </div>
+
+      {/* Daily Expense cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
+        <Card
+          label={`Daily Expenses (${todayLabel})`}
+          value={formatINR(dailyExp?.todayTotal ?? 0)}
+          color="#f97316"
+        />
+        <Card
+          label={`Monthly Daily Expenses (${formatMonth(month)})`}
+          value={formatINR(dailyExp?.monthTotal ?? 0)}
+          color="#dc2626"
+        />
       </div>
 
       {/* Loan progress */}
