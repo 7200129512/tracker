@@ -1,7 +1,7 @@
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer,
 } from 'recharts';
-import { useDashboardSummary, useCashFlow, useDashboardAlerts, useMonthlyDailyExpenses } from '../api/dashboard';
+import { useDashboardSummary, useCashFlow, useDashboardAlerts, useMonthlyDailyExpenses, useDailyChart } from '../api/dashboard';
 import { formatINR, currentMonth, formatMonth } from '../utils/format';
 
 export default function DashboardPage() {
@@ -10,9 +10,11 @@ export default function DashboardPage() {
   const { data: cashflow } = useCashFlow();
   const { data: alerts } = useDashboardAlerts(month);
   const { data: dailyExp } = useMonthlyDailyExpenses();
+  const { data: dailyChart } = useDailyChart();
 
   const today = new Date();
   const todayLabel = today.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+  const monthName = today.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
 
   if (isLoading) return <p>Loading dashboard…</p>;
 
@@ -61,20 +63,28 @@ export default function DashboardPage() {
         <Card label="Monthly EMI" value={formatINR(summary?.monthlyEmi ?? 0)} color="#f97316" />
       </div>
 
-      {/* Cash flow chart */}
-      {cashflow && cashflow.length > 0 && (
+      {/* Daily chart — current month day by day */}
+      {dailyChart && dailyChart.length > 0 && (
         <div style={{ ...cardStyle, marginTop: 8 }}>
-          <h3 style={{ marginBottom: 16, color: '#1e293b' }}>12-Month Cash Flow</h3>
-          <ResponsiveContainer width="100%" height={280}>
-            <BarChart data={cashflow.map((d) => ({ ...d, month: formatMonth(d.month) }))}>
-              <XAxis dataKey="month" tick={{ fontSize: 11 }} />
+          <h3 style={{ marginBottom: 4, color: '#1e293b' }}>Daily Transactions — {monthName}</h3>
+          <p style={{ fontSize: 13, color: '#64748b', marginBottom: 16 }}>Day-by-day spent and received from your bank emails</p>
+          <ResponsiveContainer width="100%" height={260}>
+            <BarChart data={dailyChart} barCategoryGap="30%">
+              <XAxis dataKey="day" tick={{ fontSize: 11 }} label={{ value: 'Day', position: 'insideBottom', offset: -2, fontSize: 11 }} />
               <YAxis tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 11 }} />
-              <Tooltip formatter={(v: number) => formatINR(v)} />
+              <Tooltip formatter={(v: number) => formatINR(v)} labelFormatter={(l) => `Day ${l}`} />
               <Legend />
-              <Bar dataKey="income" fill="#22c55e" name="Income" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="expenses" fill="#ef4444" name="Expenses" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="spent" fill="#ef4444" name="Spent" radius={[3, 3, 0, 0]} />
+              <Bar dataKey="received" fill="#22c55e" name="Received" radius={[3, 3, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
+        </div>
+      )}
+
+      {(!dailyChart || dailyChart.length === 0) && (
+        <div style={{ ...cardStyle, marginTop: 8, textAlign: 'center', padding: '32px 20px' }}>
+          <div style={{ fontSize: 32, marginBottom: 8 }}>📊</div>
+          <p style={{ color: '#64748b', fontSize: 14 }}>No transactions this month yet. Sync your Gmail to see the daily chart.</p>
         </div>
       )}
     </div>

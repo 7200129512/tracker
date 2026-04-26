@@ -173,7 +173,55 @@ export const useMonthlyDailyExpenses = () => {
   });
 };
 
-export const useDashboardAlerts = (month: string) => {
+// Hook for daily chart data — current month day-by-day from daily_transactions
+export const useDailyChart = () => {
+  const { user } = useAuth();
+  const today = new Date();
+  const firstOfMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-01`;
+  const todayStr = today.toISOString().split('T')[0];
+  const monthLabel = today.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
+
+  return useQuery<{ day: string; spent: number; received: number }[]>({
+    queryKey: ['daily-chart', user?.id, todayStr],
+    queryFn: async () => {
+      if (!user?.id) throw new Error('User not authenticated');
+      const { supabase } = await import('./auth');
+
+      const { data } = await supabase
+        .from('daily_transactions')
+        .select('amount, type, date')
+        .eq('user_id', user.id)
+        .gte('date', firstOfMonth)
+        .lte('date', todayStr)
+        .order('date', { ascending: true });
+
+      // Group by date
+      const grouped: Record<string, { spent: number; received: number }> = {};
+      (data || []).forEach(r => {
+        if (!grouped[r.date]) grouped[r.date] = { spent: 0, received: 0 };
+        if (r.type === 'debit') grouped[r.date].spent += Number(r.amount);
+        else grouped[r.date].received += Number(r.amount);
+      });
+
+      // Fill all days from 1st to today
+      const result = [];
+      const start = new Date(firstOfMonth);
+      const end = new Date(todayStr);
+      for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+        const key = d.toISOString().split('T')[0];
+        const dayNum = d.getDate().toString();
+        result.push({
+          day: dayNum,
+          spent: grouped[key]?.spent ?? 0,
+          received: grouped[key]?.received ?? 0,
+        });
+      }
+      return result;
+    },
+    enabled: !!user?.id,
+    refetchInterval: 60000,
+  });
+};
   const { user } = useAuth();
 
   return useQuery<DashboardAlerts>({
