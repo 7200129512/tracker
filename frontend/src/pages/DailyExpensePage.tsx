@@ -103,7 +103,11 @@ export default function DailyExpensePage() {
       });
       const data = await res.json();
       if (data.error) throw new Error(data.error);
-      setMessage(data.message);
+      // Show detailed debug info
+      const debugInfo = data.debug ? `\n\nDebug (${data.newFound} new emails):\n` + 
+        data.debug.map((d: any) => `• ${d.snippet?.substring(0,80)} → ${d.parsed ? `₹${d.parsed.amount} ${d.parsed.date}` : 'NOT PARSED'}`).join('\n') : '';
+      setMessage(data.message + (data.debug ? ` (found ${data.newFound} new, total ${data.total})` : ''));
+      if (debugInfo) console.log('Gmail sync debug:', data.debug);
       setLastSync(new Date().toISOString());
       loadTransactions(selectedDate);
     } catch (err: any) {

@@ -294,11 +294,20 @@ exports.handler = async (event) => {
 
     // 7. Parse all transactions
     const toSave = [];
+    const debugLog = [];
     for (let i = 0; i < fullMessages.length; i++) {
       const fullMsg = fullMessages[i];
       const text = extractTextFromMessage(fullMsg);
       const emailDate = getEmailDate(fullMsg);
       const tx = parseTransactionEmail(text, emailDate);
+      
+      debugLog.push({
+        id: newMessages[i].id,
+        snippet: fullMsg.snippet?.substring(0, 100),
+        textSample: text.substring(0, 150),
+        parsed: tx ? { amount: tx.amount, type: tx.type, merchant: tx.merchant, date: tx.date } : null,
+      });
+      
       if (!tx) continue;
 
       toSave.push({
@@ -318,9 +327,6 @@ exports.handler = async (event) => {
     const saved = await saveTransactions(userId, toSave);
     await updateLastSync(userId);
 
-    // Build summary of what was saved for debugging
-    const savedDates = toSave.map(t => `${t.merchant} ₹${t.amount} on ${t.date}`).join(', ');
-
     return {
       statusCode: 200,
       headers,
@@ -329,10 +335,11 @@ exports.handler = async (event) => {
         saved,
         skipped: messages.length - newMessages.length,
         total: messages.length,
+        newFound: newMessages.length,
         message: saved > 0
           ? `✅ Saved ${saved} new transaction${saved > 1 ? 's' : ''} from this month`
           : 'No new transactions found.',
-        debug: savedDates || 'nothing to save',
+        debug: debugLog,
       }),
     };
   } catch (err) {
